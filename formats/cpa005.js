@@ -27,14 +27,14 @@ function validateConfig(eftConfig) {
     }
     if (eftConfig.originatorShortName.length > 15) {
         validationWarnings.push({
-            warningField: 'originatorShortName',
-            warning: `originatorShortName will be truncated to 15 characters: ${eftConfig.originatorShortName}`
+            warning: `originatorShortName will be truncated to 15 characters: ${eftConfig.originatorShortName}`,
+            warningField: 'originatorShortName'
         });
     }
     if (eftConfig.originatorLongName.length > 30) {
         validationWarnings.push({
-            warningField: 'originatorLongName',
-            warning: `originatorLongName will be truncated to 30 characters: ${eftConfig.originatorLongName}`
+            warning: `originatorLongName will be truncated to 30 characters: ${eftConfig.originatorLongName}`,
+            warningField: 'originatorLongName'
         });
     }
     if (!['', 'CAD', 'USD'].includes(eftConfig.destinationCurrency ?? '')) {
@@ -64,13 +64,12 @@ function validateConfig(eftConfig) {
     }
     return validationWarnings;
 }
-// eslint-disable-next-line sonarjs/cognitive-complexity
 function validateTransactions(eftTransactions) {
     const validationWarnings = [];
     if (eftTransactions.length === 0) {
         validationWarnings.push({
-            warningField: 'transactions',
-            warning: 'There are no transactions to include in the file.'
+            warning: 'There are no transactions to include in the file.',
+            warningField: 'transactions'
         });
     }
     else if (eftTransactions.length > 999_999_999) {
@@ -81,15 +80,15 @@ function validateTransactions(eftTransactions) {
         if (transaction.segments.length === 0) {
             validationWarnings.push({
                 transactionIndex,
-                warningField: 'segments',
-                warning: 'Transaction record has no segments, will be ignored.'
+                warning: 'Transaction record has no segments, will be ignored.',
+                warningField: 'segments'
             });
         }
         else if (transaction.segments.length > 6) {
             validationWarnings.push({
                 transactionIndex,
-                warningField: 'segments',
-                warning: 'Transaction record has more than 6 segments, will be split into multiple transactions.'
+                warning: 'Transaction record has more than 6 segments, will be split into multiple transactions.',
+                warningField: 'segments'
             });
         }
         if (!['C', 'D'].includes(transaction.recordType)) {
@@ -100,8 +99,8 @@ function validateTransactions(eftTransactions) {
                 validationWarnings.push({
                     transactionIndex,
                     transactionSegmentIndex,
-                    warningField: 'cpaCode',
-                    warning: `Unknown CPA code: ${segment.cpaCode}`
+                    warning: `Unknown CPA code: ${segment.cpaCode}`,
+                    warningField: 'cpaCode'
                 });
             }
             if (segment.amount <= 0) {
@@ -123,8 +122,8 @@ function validateTransactions(eftTransactions) {
                 validationWarnings.push({
                     transactionIndex,
                     transactionSegmentIndex,
-                    warningField: 'payeeName',
-                    warning: `payeeName will be truncated to 30 characters: ${segment.payeeName}`
+                    warning: `payeeName will be truncated to 30 characters: ${segment.payeeName}`,
+                    warningField: 'payeeName'
                 });
             }
             if (segment.crossReferenceNumber !== undefined) {
@@ -132,8 +131,8 @@ function validateTransactions(eftTransactions) {
                     validationWarnings.push({
                         transactionIndex,
                         transactionSegmentIndex,
-                        warningField: 'crossReferenceNumber',
-                        warning: `crossReferenceNumber should be unique: ${segment.crossReferenceNumber}`
+                        warning: `crossReferenceNumber should be unique: ${segment.crossReferenceNumber}`,
+                        warningField: 'crossReferenceNumber'
                     });
                 }
                 crossReferenceNumbers.add(segment.crossReferenceNumber);
@@ -218,19 +217,17 @@ export function formatToCPA005(eftGenerator) {
             const segment = transaction.segments[segmentIndex];
             const paymentJulianDate = toPaddedJulianDate(segment.paymentDate ?? new Date());
             let crossReferenceNumber = segment.crossReferenceNumber;
-            if (crossReferenceNumber === undefined) {
-                crossReferenceNumber =
-                    'f' +
-                        eftConfig.fileCreationNumber +
-                        'r' +
-                        recordCount.toString() +
-                        's' +
-                        (segmentIndex + 1).toString();
-            }
+            crossReferenceNumber ??=
+                'f' +
+                    eftConfig.fileCreationNumber +
+                    'r' +
+                    recordCount.toString() +
+                    's' +
+                    (segmentIndex + 1).toString();
             const originatorShortName = eftConfig.originatorShortName ?? eftConfig.originatorLongName;
             record +=
                 // Transaction Type
-                segment.cpaCode.toString() +
+                segment.cpaCode +
                     // Amount
                     Math.round(segment.amount * 100)
                         .toString()

@@ -132,7 +132,7 @@ await describe('eft-generator - CPA-005', async () => {
                 fileCreationNumber: '1234',
                 destinationCurrency: 'AUD'
             });
-            assert(!eftGenerator.validateCPA005());
+            assert.ok(!eftGenerator.validateCPA005());
         });
         await it('Warns on missing originatorShortName', () => {
             const eftGenerator = new EFTGenerator({
@@ -140,7 +140,7 @@ await describe('eft-generator - CPA-005', async () => {
                 originatorLongName: 'This name exceeds the 30 character limit and will be truncated.',
                 fileCreationNumber: '0001'
             });
-            assert(validateCPA005(eftGenerator).some((validationWarning) => validationWarning.warningField === 'originatorShortName'));
+            assert.ok(validateCPA005(eftGenerator).some((validationWarning) => validationWarning.warningField === 'originatorShortName'));
         });
     });
     await describe('Transaction errors and warnings', async () => {
@@ -174,7 +174,7 @@ await describe('eft-generator - CPA-005', async () => {
                 segments: []
             });
             const validationWarnings = validateCPA005(eftGenerator);
-            assert(validationWarnings.some((validationWarning) => validationWarning.warningField === 'segments'));
+            assert.ok(validationWarnings.some((validationWarning) => validationWarning.warningField === 'segments'));
             const output = eftGenerator.toCPA005();
             assert.ok(output.length > 0);
         });
@@ -242,7 +242,7 @@ await describe('eft-generator - CPA-005', async () => {
                 ]
             });
             const validationWarnings = validateCPA005(eftGenerator);
-            assert(validationWarnings.some((validationWarning) => validationWarning.warningField === 'segments'));
+            assert.ok(validationWarnings.some((validationWarning) => validationWarning.warningField === 'segments'));
             const output = eftGenerator.toCPA005();
             assert.ok(output.length > 0);
         });
@@ -346,7 +346,7 @@ await describe('eft-generator - CPA-005', async () => {
                 bankAccountNumber: '1',
                 cpaCode: cpaCodePropertyTaxes
             });
-            assert(validateCPA005(eftGenerator).some((validationWarning) => validationWarning.warningField === 'payeeName'));
+            assert.ok(validateCPA005(eftGenerator).some((validationWarning) => validationWarning.warningField === 'payeeName'));
         });
         await it('Warns when the crossReferenceNumber is duplicated.', () => {
             const eftGenerator = new EFTGenerator(config);
@@ -368,7 +368,7 @@ await describe('eft-generator - CPA-005', async () => {
                 bankAccountNumber: '1',
                 cpaCode: cpaCodePropertyTaxes
             });
-            assert(validateCPA005(eftGenerator).some((validationWarning) => validationWarning.warningField === 'crossReferenceNumber'));
+            assert.ok(validateCPA005(eftGenerator).some((validationWarning) => validationWarning.warningField === 'crossReferenceNumber'));
         });
     });
 });

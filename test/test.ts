@@ -155,7 +155,7 @@ await describe('eft-generator - CPA-005', async () => {
         destinationCurrency: 'AUD'
       })
 
-      assert(!eftGenerator.validateCPA005())
+      assert.ok(!eftGenerator.validateCPA005())
     })
 
     await it('Warns on missing originatorShortName', () => {
@@ -166,7 +166,7 @@ await describe('eft-generator - CPA-005', async () => {
         fileCreationNumber: '0001'
       })
 
-      assert(
+      assert.ok(
         validateCPA005(eftGenerator).some(
           (validationWarning) =>
             validationWarning.warningField === 'originatorShortName'
@@ -211,7 +211,7 @@ await describe('eft-generator - CPA-005', async () => {
 
       const validationWarnings = validateCPA005(eftGenerator)
 
-      assert(
+      assert.ok(
         validationWarnings.some(
           (validationWarning) => validationWarning.warningField === 'segments'
         )
@@ -289,7 +289,7 @@ await describe('eft-generator - CPA-005', async () => {
 
       const validationWarnings = validateCPA005(eftGenerator)
 
-      assert(
+      assert.ok(
         validationWarnings.some(
           (validationWarning) => validationWarning.warningField === 'segments'
         )
@@ -412,7 +412,7 @@ await describe('eft-generator - CPA-005', async () => {
         cpaCode: cpaCodePropertyTaxes
       })
 
-      assert(
+      assert.ok(
         validateCPA005(eftGenerator).some(
           (validationWarning) => validationWarning.warningField === 'payeeName'
         )
@@ -442,7 +442,7 @@ await describe('eft-generator - CPA-005', async () => {
         cpaCode: cpaCodePropertyTaxes
       })
 
-      assert(
+      assert.ok(
         validateCPA005(eftGenerator).some(
           (validationWarning) =>
             validationWarning.warningField === 'crossReferenceNumber'

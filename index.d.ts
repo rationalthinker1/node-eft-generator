@@ -19,5 +19,5 @@ export declare class EFTGenerator {
      */
     validateCPA005(): boolean;
 }
-export { cpaTransactionCodes, isCPATransactionCode } from '@cityssm/cpa-codes';
 export type * as types from './types.js';
+export { cpaTransactionCodes, isCPATransactionCode } from '@cityssm/cpa-codes';
