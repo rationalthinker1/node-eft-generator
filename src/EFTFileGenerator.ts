@@ -36,7 +36,13 @@ export class EFTFileGenerator {
 
     lines.push(this.generateTrailer());
 
-    return lines.join(NEWLINE);
+    const output = lines.join(NEWLINE);
+
+    // End-of-pipeline file-level invariant check. Catches anything the
+    // input validation and per-record assertions could miss.
+    this.#validator.assertCompliantOutput(output);
+
+    return output;
   }
 
   generateHeader(): string {
@@ -47,14 +53,11 @@ export class EFTFileGenerator {
       eftConfig.fileCreationDate ?? new Date()
     );
 
-    const dataCentre =
-      eftConfig.destinationDataCentre === undefined
-        ? EFTFileSpec.fixedField('', widths.dataCentre, LEFT_SPACE)
-        : EFTFileSpec.fixedField(
-            eftConfig.destinationDataCentre,
-            widths.dataCentre,
-            RIGHT_ZERO
-          );
+    const dataCentre = EFTFileSpec.fixedField(
+      eftConfig.destinationDataCentre,
+      widths.dataCentre,
+      RIGHT_ZERO
+    );
 
     const destinationCurrency =
       eftConfig.destinationCurrency === undefined

@@ -27,8 +27,10 @@ export interface EFTConfiguration {
   /**
    * Also known as:
    * - Processing Centre
+   *
+   * Required by both BMO and RBC CPA-005 specs (header field 06, positions 31-35).
    */
-  destinationDataCentre?: string;
+  destinationDataCentre: string;
 
   destinationCurrency?: 'CAD' | 'USD';
 

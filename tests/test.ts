@@ -104,7 +104,8 @@ await describe('eft-generator - CPA-005', async () => {
         originatorId: '12345678901234567890',
         originatorShortName: 'X',
         originatorLongName: '',
-        fileCreationNumber: '0001'
+        fileCreationNumber: '0001',
+        destinationDataCentre: '123'
       });
       assert.throws(() => {
         eftGenerator.generate();
@@ -116,7 +117,8 @@ await describe('eft-generator - CPA-005', async () => {
         originatorId: '1',
         originatorShortName: 'X',
         originatorLongName: '',
-        fileCreationNumber: 'abcdefg'
+        fileCreationNumber: 'abcdefg',
+        destinationDataCentre: '123'
       });
       assert.throws(() => {
         eftGenerator.generate();
@@ -155,7 +157,8 @@ await describe('eft-generator - CPA-005', async () => {
         originatorId: '01',
         originatorLongName:
           'This name exceeds the 30 character limit and will be truncated.',
-        fileCreationNumber: '0001'
+        fileCreationNumber: '0001',
+        destinationDataCentre: '123'
       });
       assert.throws(
         () => new EFTFileValidator(eftGenerator).validate(),
@@ -399,6 +402,17 @@ await describe('eft-generator - CPA-005', async () => {
         /originatorLongName contains prohibited characters/
       );
     });
+
+    await it('throws when originatorId contains prohibited characters (spec page 59)', () => {
+      const eftGenerator = new EFTFileBuilder({
+        ...config,
+        originatorId: 'CO(123)'
+      });
+      assert.throws(
+        () => new EFTFileValidator(eftGenerator).validate(),
+        /originatorId contains prohibited characters/
+      );
+    });
   });
 
   await describe('Spec field positions', async () => {
@@ -423,7 +437,7 @@ await describe('eft-generator - CPA-005', async () => {
       const lines = buildSampleOutput().split('\r');
       const cRecord = lines.find((line) =>
         line.startsWith(RECORD_TYPE.TRANSACTION_CREDIT)
-      );
+      ) ?? '';
       assert.ok(cRecord, 'expected at least one C record');
       assert.strictEqual(cRecord.slice(164, 174), ' '.repeat(10));
     });
@@ -432,7 +446,7 @@ await describe('eft-generator - CPA-005', async () => {
       const lines = buildSampleOutput().split('\r');
       const dRecord = lines.find((line) =>
         line.startsWith(RECORD_TYPE.TRANSACTION_DEBIT)
-      );
+      ) ?? '';
       assert.ok(dRecord, 'expected at least one D record');
       assert.strictEqual(dRecord.slice(164, 174), ' '.repeat(10));
     });
@@ -441,16 +455,164 @@ await describe('eft-generator - CPA-005', async () => {
       const lines = buildSampleOutput().split('\r');
       const dRecord = lines.find((line) =>
         line.startsWith(RECORD_TYPE.TRANSACTION_DEBIT)
-      );
+      ) ?? '';
       assert.ok(dRecord);
       assert.strictEqual(dRecord.slice(214, 247), '0'.repeat(33));
     });
 
     await it('Trailer positions 69-1464 are 1396 blanks (spec page 64)', () => {
       const lines = buildSampleOutput().split('\r');
-      const trailer = lines.find((line) => line.startsWith(RECORD_TYPE.TRAILER));
+      const trailer = lines.find((line) => line.startsWith(RECORD_TYPE.TRAILER)) ?? '';
       assert.ok(trailer);
       assert.strictEqual(trailer.slice(68), ' '.repeat(1396));
+    });
+  });
+
+  await describe('assertCompliantOutput', async () => {
+    function builderWithOneTransaction(): EFTFileBuilder {
+      const eftGenerator = new EFTFileBuilder(config);
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        cpaCode: cpaCodePropertyTaxes,
+        amount: 100,
+        payeeName: 'TEST PAYEE'
+      });
+      return eftGenerator;
+    }
+
+    function validatorFor(builder: EFTFileBuilder): EFTFileValidator {
+      return new EFTFileValidator(builder);
+    }
+
+    await it('throws on empty output', () => {
+      assert.throws(
+        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(''),
+        /output is empty/
+      );
+    });
+
+    await it('throws when output contains LF', () => {
+      const valid = builderWithOneTransaction().generate();
+      const tampered = valid.replace('\r', '\r\n');
+      assert.throws(
+        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        /contains LF/
+      );
+    });
+
+    await it('throws when fewer than 3 records', () => {
+      // header + trailer only (no transaction).
+      const headerOnlyBuilder = builderWithOneTransaction();
+      const valid = headerOnlyBuilder.generate();
+      const lines = valid.split('\r');
+      const headerAndTrailer = [lines[0], lines.at(-1)].join('\r');
+      assert.throws(
+        () => validatorFor(headerOnlyBuilder).assertCompliantOutput(headerAndTrailer),
+        /requires at least 3/
+      );
+    });
+
+    await it('passes when transaction record is exactly 1464 chars', () => {
+      const builder = builderWithOneTransaction();
+      const valid = builder.generate();
+      const lines = valid.split('\r');
+      assert.strictEqual((lines[1] ?? '').length, 1464);
+      assert.doesNotThrow(() => {
+        validatorFor(builder).assertCompliantOutput(valid);
+      });
+    });
+
+    await it('throws when transaction record is 1463 chars (one short)', () => {
+      const valid = builderWithOneTransaction().generate();
+      const lines = valid.split('\r');
+      lines[1] = (lines[1] ?? '').slice(0, 1463);
+      const tampered = lines.join('\r');
+      assert.throws(
+        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        /record 2 length is 1463/
+      );
+    });
+
+    await it('throws when transaction record is 1465 chars (one long)', () => {
+      const valid = builderWithOneTransaction().generate();
+      const lines = valid.split('\r');
+      lines[1] = (lines[1] ?? '') + ' ';
+      const tampered = lines.join('\r');
+      assert.throws(
+        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        /record 2 length is 1465/
+      );
+    });
+
+    await it('throws when a record is catastrophically truncated', () => {
+      const valid = builderWithOneTransaction().generate();
+      const lines = valid.split('\r');
+      lines[1] = (lines[1] ?? '').slice(0, 100);
+      const tampered = lines.join('\r');
+      assert.throws(
+        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        /record 2 length is 100/
+      );
+    });
+
+    await it('throws when a record contains a prohibited character', () => {
+      const valid = builderWithOneTransaction().generate();
+      const lines = valid.split('\r');
+      // Replace one char in the transaction line with a lowercase letter.
+      const original = lines[1] ?? '';
+      lines[1] = 'x' + original.slice(1);
+      const tampered = lines.join('\r');
+      assert.throws(
+        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        /prohibited character "x"/
+      );
+    });
+
+    await it('throws when first record is not the header', () => {
+      const valid = builderWithOneTransaction().generate();
+      const lines = valid.split('\r');
+      // Swap the first character of the header from 'A' to 'X'.
+      const header = lines[0] ?? '';
+      lines[0] = 'X' + header.slice(1);
+      const tampered = lines.join('\r');
+      assert.throws(
+        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        /first record must start with 'A'/
+      );
+    });
+
+    await it('throws when last record is not the trailer', () => {
+      const valid = builderWithOneTransaction().generate();
+      const lines = valid.split('\r');
+      const trailer = lines.at(-1) ?? '';
+      lines[lines.length - 1] = 'X' + trailer.slice(1);
+      const tampered = lines.join('\r');
+      assert.throws(
+        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        /last record must start with 'Z'/
+      );
+    });
+
+    await it('throws when trailer record count does not match line count', () => {
+      const valid = builderWithOneTransaction().generate();
+      const lines = valid.split('\r');
+      const trailer = lines.at(-1) ?? '';
+      // Trailer record count field is at positions 2-10 (slice(1, 10)).
+      // Replace it with a wrong count.
+      lines[lines.length - 1] = trailer.charAt(0) + '999999999' + trailer.slice(10);
+      const tampered = lines.join('\r');
+      assert.throws(
+        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        /trailer record count is "999999999"/
+      );
+    });
+
+    await it('passes for output produced by generate()', () => {
+      const builder = builderWithOneTransaction();
+      const output = builder.generate();
+      assert.doesNotThrow(() => {
+        validatorFor(builder).assertCompliantOutput(output);
+      });
     });
   });
 

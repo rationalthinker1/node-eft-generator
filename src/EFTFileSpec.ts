@@ -80,4 +80,5 @@ export class EFTFileSpec {
     }
     return record;
   }
+
 }

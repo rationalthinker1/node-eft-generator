@@ -1,11 +1,26 @@
 import { EFTFileSpec } from '#EFTFileSpec';
 import type { EFTFileBuilder } from '#EFTFileBuilder';
-import { TRANSACTION_TYPE, type EFTConfiguration, type EFTTransaction } from '#types';
-import { containsProhibitedCharacters } from '#utils';
+import {
+  RECORD_TYPE,
+  TRANSACTION_TYPE,
+  type EFTConfiguration,
+  type EFTTransaction
+} from '#types';
+import { NEWLINE, containsProhibitedCharacters } from '#utils';
 
 const MS_PER_DAY = 86_400_000;
 const MAX_PAYMENT_DATE_OFFSET_DAYS = 173;
 const MAX_PAYMENT_DATE_OFFSET_MS = MAX_PAYMENT_DATE_OFFSET_DAYS * MS_PER_DAY;
+
+const PROHIBITED_OUTPUT_CHAR_PATTERN = /[^0-9A-Z =_$.&*,]/;
+
+// Trailer field 02 is at positions 2-10 (1-indexed), 9 chars wide,
+// containing the file's total logical record count zero-padded.
+const TRAILER_RECORD_COUNT_START = 1;
+const TRAILER_RECORD_COUNT_END = 10;
+
+// Minimum valid file: header + 1 transaction + trailer.
+const MINIMUM_RECORD_COUNT = 3;
 
 /**
  * Validates an `EFTFileBuilder` against the CPA-005 specification.
@@ -27,10 +42,118 @@ export class EFTFileValidator {
     this.validateTransactions(this.#builder.getTransactions());
   }
 
+  /**
+   * Comprehensive end-of-pipeline check on the fully-assembled file.
+   *
+   * `validate()` catches bad input and `EFTFileSpec.assertRecordLength`
+   * catches malformed individual records. This method is the last line of
+   * defence: it verifies file-level invariants no per-record check can see
+   * (record ordering, exactly-one header/trailer, trailer reconciliation,
+   * no stray prohibited characters anywhere in the assembled output).
+   *
+   * Throws on the first violation found.
+   */
+  assertCompliantOutput(output: string): void {
+    if (output.length === 0) {
+      throw new Error('CPA-005 output is empty.');
+    }
+
+    if (output.includes('\n')) {
+      throw new Error(
+        'CPA-005 output contains LF (0x0A); records must be CR-only delimited (spec page 58).'
+      );
+    }
+
+    const lines = output.split(NEWLINE);
+
+    if (lines.length < MINIMUM_RECORD_COUNT) {
+      throw new Error(
+        `CPA-005 output has ${String(lines.length)} record(s); a valid file requires at least ${String(MINIMUM_RECORD_COUNT)} (header, transaction, trailer).`
+      );
+    }
+
+    for (const [index, line] of lines.entries()) {
+      const recordNumber = index + 1;
+
+      if (line.length !== EFTFileSpec.RECORD_LENGTH) {
+        throw new Error(
+          `CPA-005 record ${String(recordNumber)} length is ${String(line.length)}, expected ${String(EFTFileSpec.RECORD_LENGTH)}.`
+        );
+      }
+
+      const offending = PROHIBITED_OUTPUT_CHAR_PATTERN.exec(line);
+      if (offending) {
+        throw new Error(
+          `CPA-005 record ${String(recordNumber)} contains prohibited character ${JSON.stringify(offending[0])} at column ${String(offending.index + 1)}.`
+        );
+      }
+    }
+
+    if (!lines[0]?.startsWith(RECORD_TYPE.HEADER)) {
+      throw new Error(
+        `CPA-005 first record must start with '${RECORD_TYPE.HEADER}' (header), got '${String(lines[0]?.charAt(0))}'.`
+      );
+    }
+
+    const trailerLine = lines.at(-1);
+    if (!trailerLine?.startsWith(RECORD_TYPE.TRAILER)) {
+      throw new Error(
+        `CPA-005 last record must start with '${RECORD_TYPE.TRAILER}' (trailer), got '${String(trailerLine?.charAt(0))}'.`
+      );
+    }
+
+    let headerCount = 0;
+    let trailerCount = 0;
+    for (const [index, line] of lines.entries()) {
+      const recordType = line.charAt(0);
+
+      if (recordType === RECORD_TYPE.HEADER) {
+        headerCount += 1;
+      } else if (recordType === RECORD_TYPE.TRAILER) {
+        trailerCount += 1;
+      } else if (
+        recordType !== RECORD_TYPE.TRANSACTION_CREDIT &&
+        recordType !== RECORD_TYPE.TRANSACTION_DEBIT
+      ) {
+        throw new Error(
+          `CPA-005 record ${String(index + 1)} has unknown record type '${recordType}'; expected one of '${RECORD_TYPE.HEADER}', '${RECORD_TYPE.TRANSACTION_CREDIT}', '${RECORD_TYPE.TRANSACTION_DEBIT}', '${RECORD_TYPE.TRAILER}'.`
+        );
+      }
+    }
+
+    if (headerCount !== 1) {
+      throw new Error(
+        `CPA-005 must contain exactly 1 header record; found ${String(headerCount)}.`
+      );
+    }
+    if (trailerCount !== 1) {
+      throw new Error(
+        `CPA-005 must contain exactly 1 trailer record; found ${String(trailerCount)}.`
+      );
+    }
+
+    const trailerRecordCountField = trailerLine.slice(
+      TRAILER_RECORD_COUNT_START,
+      TRAILER_RECORD_COUNT_END
+    );
+    const trailerRecordCount = Number.parseInt(trailerRecordCountField, 10);
+    if (Number.isNaN(trailerRecordCount) || trailerRecordCount !== lines.length) {
+      throw new Error(
+        `CPA-005 trailer record count is "${trailerRecordCountField}", expected ${String(lines.length)} (matching actual line count).`
+      );
+    }
+  }
+
   validateConfig(eftConfig: EFTConfiguration): void {
     if (eftConfig.originatorId.length > EFTFileSpec.FIELD_WIDTHS.originatorId) {
       throw new Error(
         `originatorId length exceeds ${String(EFTFileSpec.FIELD_WIDTHS.originatorId)}: ${eftConfig.originatorId}`
+      );
+    }
+
+    if (containsProhibitedCharacters(eftConfig.originatorId)) {
+      throw new Error(
+        `originatorId contains prohibited characters: ${eftConfig.originatorId}`
       );
     }
 
@@ -40,9 +163,9 @@ export class EFTFileValidator {
       );
     }
 
-    if (!/^\d{0,5}$/.test(eftConfig.destinationDataCentre ?? '')) {
+    if (!/^\d{1,5}$/.test(eftConfig.destinationDataCentre)) {
       throw new Error(
-        `destinationDataCentre should be 1 to 5 digits: ${eftConfig.destinationDataCentre ?? '<unset>'}`
+        `destinationDataCentre should be 1 to 5 digits: ${eftConfig.destinationDataCentre}`
       );
     }
 
