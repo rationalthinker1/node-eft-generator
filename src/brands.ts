@@ -1,21 +1,22 @@
 /**
- * Branded string types for the digit fields the CPA-005 spec requires.
+ * Branded string types for the digit fields a CPA-005 Pre-Authorized
+ * Debit (PAD) record requires: the routing trio (institution, transit,
+ * account number).
  *
  * Each branded type can only be produced through its constructor, which
- * validates the digit pattern at runtime. This means downstream code can
- * treat the value as already-validated and skip its own length / shape
- * checks.
+ * validates the digit pattern at runtime. Downstream code can treat the
+ * value as already-validated and skip its own length / shape checks.
  */
 
-declare const __digitsBrand: unique symbol;
+declare const __bankPADBrand: unique symbol;
 
-type Branded<TBrand extends string> = string & {
-  readonly [__digitsBrand]: TBrand;
+type BankPADInformation<TBrand extends string> = string & {
+  readonly [__bankPADBrand]: TBrand;
 };
 
-export type BankInstitution = Branded<'BankInstitution'>;
-export type BankTransit = Branded<'BankTransit'>;
-export type BankAccount = Branded<'BankAccount'>;
+export type BankInstitution = BankPADInformation<'BankInstitution'>;
+export type BankTransit = BankPADInformation<'BankTransit'>;
+export type BankAccount = BankPADInformation<'BankAccount'>;
 
 const INSTITUTION_PATTERN = /^\d{3}$/;
 const TRANSIT_PATTERN = /^\d{5}$/;
