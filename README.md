@@ -70,7 +70,8 @@ methods on the public class were also renamed for clarity:
 ## Resources
 
 - [Canadian Payments Association Standard 005](https://www.payments.ca/sites/default/files/standard005eng.pdf)
-- [Royal Bank CPA-005 Reference](https://www.rbcroyalbank.com/ach/file-451771.pdf)
+- [Royal Bank CPA-005 Reference](docs/rbc-cpa-005-reference.pdf) ([RBC source](https://www.rbcroyalbank.com/ach/file-451771.pdf))
+- [BMO Electronic Funds Transfer Client Manual](docs/bmo-cpa-005-reference.pdf)
 
 ## Related Projects
 
