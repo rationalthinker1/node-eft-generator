@@ -3,8 +3,9 @@ import fs from 'node:fs';
 import { describe, it } from 'node:test';
 
 import { EFTFileValidator } from '#EFTFileValidator';
-import { EFTFileBuilder } from '#index';
+import { EFTFileBuilder, account5to12, institution3, transit5 } from '#index';
 import { RECORD_TYPE, TRANSACTION_TYPE, type EFTConfiguration } from '#types';
+import type { CPATransactionCode } from '#cpaCodes/transactions';
 import { NEWLINE as cpa005_newline } from '#utils';
 
 const config: EFTConfiguration = {
@@ -15,12 +16,18 @@ const config: EFTConfiguration = {
   destinationCurrency: 'CAD',
   destinationDataCentre: '123',
 
-  returnInstitutionNumber: '111',
-  returnTransitNumber: '22222',
-  returnAccountNumber: '333333333333'
+  returnInstitutionNumber: institution3('111'),
+  returnTransitNumber: transit5('22222'),
+  returnAccountNumber: account5to12('333333333333')
 };
 
-const cpaCodePropertyTaxes = '385';
+const cpaCodePropertyTaxes: CPATransactionCode = '385';
+
+const validBank = {
+  bankInstitutionNumber: institution3('111'),
+  bankTransitNumber: transit5('22222'),
+  bankAccountNumber: account5to12('333333333')
+};
 
 await describe('eft-generator - CPA-005', async () => {
   await it('Creates valid CPA-005 formatted output', () => {
@@ -32,17 +39,15 @@ await describe('eft-generator - CPA-005', async () => {
       recordType: TRANSACTION_TYPE.DEBIT,
       segments: [
         {
-          bankInstitutionNumber: '111',
-          bankTransitNumber: '22222',
-          bankAccountNumber: '333333333',
+          ...validBank,
           cpaCode: cpaCodePropertyTaxes,
           amount: 1234.56,
           payeeName: 'Test Property Owner'
         },
         {
-          bankInstitutionNumber: '222',
-          bankTransitNumber: '33333',
-          bankAccountNumber: '4444444444',
+          bankInstitutionNumber: institution3('222'),
+          bankTransitNumber: transit5('33333'),
+          bankAccountNumber: account5to12('4444444444'),
           cpaCode: cpaCodePropertyTaxes,
           amount: 2345.67,
           payeeName: 'Test Property Owner 2'
@@ -56,17 +61,15 @@ await describe('eft-generator - CPA-005', async () => {
       recordType: TRANSACTION_TYPE.CREDIT,
       segments: [
         {
-          bankInstitutionNumber: '111',
-          bankTransitNumber: '22222',
-          bankAccountNumber: '333333333',
+          ...validBank,
           cpaCode: cpaCodePropertyTaxes,
           amount: 1234.56,
           payeeName: 'Test Property Owner'
         },
         {
-          bankInstitutionNumber: '222',
-          bankTransitNumber: '33333',
-          bankAccountNumber: '4444444444',
+          bankInstitutionNumber: institution3('222'),
+          bankTransitNumber: transit5('33333'),
+          bankAccountNumber: account5to12('4444444444'),
           cpaCode: cpaCodePropertyTaxes,
           amount: 2345.67,
           payeeName: 'Test Property Owner 2'
@@ -174,6 +177,41 @@ await describe('eft-generator - CPA-005', async () => {
     });
   });
 
+  await describe('Brand constructors', async () => {
+    await it('institution3 throws on values that are not exactly 3 digits', () => {
+      assert.throws(() => institution3('1'));
+      assert.throws(() => institution3('12'));
+      assert.throws(() => institution3('1234'));
+      assert.throws(() => institution3('abc'));
+      assert.throws(() => institution3('a1b'));
+    });
+
+    await it('institution3 accepts any 3-digit value', () => {
+      assert.strictEqual(institution3('001'), '001');
+      assert.strictEqual(institution3('111'), '111');
+      assert.strictEqual(institution3('999'), '999');
+    });
+
+    await it('transit5 throws unless the value is exactly 5 digits', () => {
+      assert.throws(() => transit5('1'));
+      assert.throws(() => transit5('1234'));
+      assert.throws(() => transit5('123456'));
+      assert.throws(() => transit5('abcde'));
+    });
+
+    await it('account5to12 throws on values shorter than 5 or longer than 12', () => {
+      assert.throws(() => account5to12('1'));
+      assert.throws(() => account5to12('1234'));
+      assert.throws(() => account5to12('1234567890123'));
+      assert.throws(() => account5to12('abcd1234'));
+    });
+
+    await it('account5to12 accepts 5- to 12-digit numerics', () => {
+      assert.strictEqual(account5to12('12345'), '12345');
+      assert.strictEqual(account5to12('123456789012'), '123456789012');
+    });
+  });
+
   await describe('Transaction errors and warnings', async () => {
     await it('Throws error when recordType is unsupported', () => {
       const eftGenerator = new EFTFileBuilder(config);
@@ -183,12 +221,9 @@ await describe('eft-generator - CPA-005', async () => {
         recordType: 'E',
         segments: [
           {
+            ...validBank,
             payeeName: 'Invalid Institution',
             amount: 100,
-            // @ts-expect-error - intentionally invalid to verify validation
-            bankInstitutionNumber: 'abc',
-            bankTransitNumber: '1',
-            bankAccountNumber: '1',
             cpaCode: cpaCodePropertyTaxes
           }
         ]
@@ -226,65 +261,23 @@ await describe('eft-generator - CPA-005', async () => {
     await it('Warns when there are more than six segments on a transaction.', () => {
       const eftGenerator = new EFTFileBuilder(config);
 
+      const segment = {
+        ...validBank,
+        bankAccountNumber: account5to12('3333333'),
+        cpaCode: cpaCodePropertyTaxes,
+        payeeName: 'Test Property Owner'
+      } as const;
+
       eftGenerator.addTransaction({
         recordType: TRANSACTION_TYPE.DEBIT,
         segments: [
-          {
-            bankInstitutionNumber: '111',
-            bankTransitNumber: '22222',
-            bankAccountNumber: '3333333',
-            cpaCode: cpaCodePropertyTaxes,
-            amount: 100.01,
-            payeeName: 'Test Property Owner'
-          },
-          {
-            bankInstitutionNumber: '111',
-            bankTransitNumber: '22222',
-            bankAccountNumber: '3333333',
-            cpaCode: cpaCodePropertyTaxes,
-            amount: 100.02,
-            payeeName: 'Test Property Owner'
-          },
-          {
-            bankInstitutionNumber: '111',
-            bankTransitNumber: '22222',
-            bankAccountNumber: '3333333',
-            cpaCode: cpaCodePropertyTaxes,
-            amount: 100.03,
-            payeeName: 'Test Property Owner'
-          },
-          {
-            bankInstitutionNumber: '111',
-            bankTransitNumber: '22222',
-            bankAccountNumber: '3333333',
-            cpaCode: cpaCodePropertyTaxes,
-            amount: 100.04,
-            payeeName: 'Test Property Owner'
-          },
-          {
-            bankInstitutionNumber: '111',
-            bankTransitNumber: '22222',
-            bankAccountNumber: '3333333',
-            cpaCode: cpaCodePropertyTaxes,
-            amount: 100.05,
-            payeeName: 'Test Property Owner'
-          },
-          {
-            bankInstitutionNumber: '111',
-            bankTransitNumber: '22222',
-            bankAccountNumber: '3333333',
-            cpaCode: cpaCodePropertyTaxes,
-            amount: 100.06,
-            payeeName: 'Test Property Owner'
-          },
-          {
-            bankInstitutionNumber: '111',
-            bankTransitNumber: '22222',
-            bankAccountNumber: '3333333',
-            cpaCode: cpaCodePropertyTaxes,
-            amount: 100.07,
-            payeeName: 'Test Property Owner'
-          }
+          { ...segment, amount: 100.01 },
+          { ...segment, amount: 100.02 },
+          { ...segment, amount: 100.03 },
+          { ...segment, amount: 100.04 },
+          { ...segment, amount: 100.05 },
+          { ...segment, amount: 100.06 },
+          { ...segment, amount: 100.07 }
         ]
       });
 
@@ -305,12 +298,10 @@ await describe('eft-generator - CPA-005', async () => {
       const eftGenerator = new EFTFileBuilder(config);
 
       eftGenerator.addDebitTransaction({
+        ...validBank,
         payeeName: 'Negative Amount',
         amount: -2,
-        bankInstitutionNumber: '1',
-        bankTransitNumber: '1',
-        bankAccountNumber: '1',
-        cpaCode: '1'
+        cpaCode: cpaCodePropertyTaxes
       });
 
       try {
@@ -325,73 +316,9 @@ await describe('eft-generator - CPA-005', async () => {
       const eftGenerator = new EFTFileBuilder(config);
 
       eftGenerator.addDebitTransaction({
+        ...validBank,
         payeeName: 'Large Amount',
         amount: 999_999_999,
-        bankInstitutionNumber: '1',
-        bankTransitNumber: '1',
-        bankAccountNumber: '1',
-        cpaCode: cpaCodePropertyTaxes
-      });
-
-      try {
-        eftGenerator.generate();
-        assert.fail();
-      } catch {
-        assert.ok(true);
-      }
-    });
-
-    await it('Throws error when bankInstitutionNumber is invalid', () => {
-      const eftGenerator = new EFTFileBuilder(config);
-
-      eftGenerator.addDebitTransaction({
-        payeeName: 'Invalid Institution',
-        amount: 100,
-        // @ts-expect-error - intentionally invalid to verify validation
-        bankInstitutionNumber: 'abc',
-        bankTransitNumber: '1',
-        bankAccountNumber: '1',
-        cpaCode: cpaCodePropertyTaxes
-      });
-
-      try {
-        eftGenerator.generate();
-        assert.fail();
-      } catch {
-        assert.ok(true);
-      }
-    });
-
-    await it('Throws error when bankTransitNumber is invalid', () => {
-      const eftGenerator = new EFTFileBuilder(config);
-
-      eftGenerator.addDebitTransaction({
-        payeeName: 'Invalid Transit',
-        amount: 100,
-        bankInstitutionNumber: '1',
-        bankTransitNumber: '1234567',
-        bankAccountNumber: '1',
-        cpaCode: cpaCodePropertyTaxes
-      });
-
-      try {
-        eftGenerator.generate();
-        assert.fail();
-      } catch {
-        assert.ok(true);
-      }
-    });
-
-    await it('Throws error when bankAccountNumber is invalid', () => {
-      const eftGenerator = new EFTFileBuilder(config);
-
-      eftGenerator.addDebitTransaction({
-        payeeName: 'Invalid Account',
-        amount: 100,
-        bankInstitutionNumber: '1',
-        bankTransitNumber: '1',
-        // @ts-expect-error - intentionally invalid to verify validation
-        bankAccountNumber: 'abcd',
         cpaCode: cpaCodePropertyTaxes
       });
 
@@ -407,11 +334,9 @@ await describe('eft-generator - CPA-005', async () => {
       const eftGenerator = new EFTFileBuilder(config);
 
       eftGenerator.addCreditTransaction({
+        ...validBank,
         payeeName: 'This payee name is too long and will be truncated to fit.',
         amount: 100,
-        bankInstitutionNumber: '1',
-        bankTransitNumber: '1',
-        bankAccountNumber: '1',
         cpaCode: cpaCodePropertyTaxes
       });
 
@@ -426,22 +351,18 @@ await describe('eft-generator - CPA-005', async () => {
       const eftGenerator = new EFTFileBuilder(config);
 
       eftGenerator.addDebitTransaction({
+        ...validBank,
         payeeName: 'Same cross reference',
         crossReferenceNumber: 'abc',
         amount: 100,
-        bankInstitutionNumber: '1',
-        bankTransitNumber: '1',
-        bankAccountNumber: '1',
         cpaCode: cpaCodePropertyTaxes
       });
 
       eftGenerator.addDebitTransaction({
+        ...validBank,
         payeeName: 'Same cross reference',
         crossReferenceNumber: 'abc',
         amount: 100,
-        bankInstitutionNumber: '1',
-        bankTransitNumber: '1',
-        bankAccountNumber: '1',
         cpaCode: cpaCodePropertyTaxes
       });
 
@@ -461,9 +382,7 @@ await describe('eft-generator - CPA-005', async () => {
       const eftGenerator = new EFTFileBuilder(config);
 
       eftGenerator.addDebitTransaction({
-        bankInstitutionNumber: '111',
-        bankTransitNumber: '22222',
-        bankAccountNumber: '333333333',
+        ...validBank,
         cpaCode: cpaCodePropertyTaxes,
         amount: 100,
         payeeName: 'TEST PAYEE'
@@ -483,9 +402,7 @@ await describe('eft-generator - CPA-005', async () => {
       });
 
       eftGenerator.addDebitTransaction({
-        bankInstitutionNumber: '111',
-        bankTransitNumber: '22222',
-        bankAccountNumber: '333333333',
+        ...validBank,
         cpaCode: cpaCodePropertyTaxes,
         amount: 100,
         payeeName: 'TEST PAYEE'
@@ -536,17 +453,13 @@ await describe('eft-generator - CPA-005', async () => {
     function buildSampleOutput(): string {
       const eftGenerator = new EFTFileBuilder(config);
       eftGenerator.addCreditTransaction({
-        bankInstitutionNumber: '111',
-        bankTransitNumber: '22222',
-        bankAccountNumber: '333333333',
+        ...validBank,
         cpaCode: cpaCodePropertyTaxes,
         amount: 100,
         payeeName: 'TEST PAYEE'
       });
       eftGenerator.addDebitTransaction({
-        bankInstitutionNumber: '111',
-        bankTransitNumber: '22222',
-        bankAccountNumber: '333333333',
+        ...validBank,
         cpaCode: cpaCodePropertyTaxes,
         amount: 200,
         payeeName: 'TEST PAYOR'

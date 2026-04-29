@@ -1,3 +1,6 @@
+import type { Account5to12, Institution3, Transit5 } from '#brands';
+import type { CPATransactionCode } from '#cpaCodes/transactions';
+
 export interface EFTConfiguration {
   /**
    * Also known as
@@ -29,20 +32,9 @@ export interface EFTConfiguration {
 
   destinationCurrency?: 'CAD' | 'USD';
 
-  /**
-   * Three digits
-   */
-  returnInstitutionNumber?: string;
-
-  /**
-   * Five digits
-   */
-  returnTransitNumber?: string;
-
-  /**
-   * Up to 12 digits
-   */
-  returnAccountNumber?: string;
+  returnInstitutionNumber?: Institution3;
+  returnTransitNumber?: Transit5;
+  returnAccountNumber?: Account5to12;
 }
 
 export const TRANSACTION_TYPE = {
@@ -71,7 +63,7 @@ export interface EFTTransaction {
 }
 
 export interface EFTTransactionSegment {
-  cpaCode: `${number}`;
+  cpaCode: CPATransactionCode;
 
   /**
    * In dollars
@@ -83,20 +75,9 @@ export interface EFTTransactionSegment {
    */
   paymentDate?: Date;
 
-  /**
-   * Three digits
-   */
-  bankInstitutionNumber: `${number}`;
-
-  /**
-   * Five digits
-   */
-  bankTransitNumber: `${number}`;
-
-  /**
-   * 5-12 digits
-   */
-  bankAccountNumber: `${number}`;
+  bankInstitutionNumber: Institution3;
+  bankTransitNumber: Transit5;
+  bankAccountNumber: Account5to12;
 
   payeeName: string;
 
@@ -120,7 +101,7 @@ export type ValidationWarning = {
     }
 );
 
-export type CPACodeString = number;
+export type CPACodeNumber = number;
 
 export interface CPACode {
   cpaCodeFullName: string;

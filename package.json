@@ -1,6 +1,6 @@
 {
   "name": "@rationalthinker1/eft-generator",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "Formats Electronic Funds Transfer (EFT) data into the CPA 005 standard.",
   "keywords": [
     "banking",
@@ -39,6 +39,8 @@
   "files": [
     "build/index.*",
     "build/types.*",
+    "build/brands.*",
+    "build/cpa005Spec.*",
     "build/EFTFileBuilder.*",
     "build/EFTFileValidator.*",
     "build/EFTFileGenerator.*",
