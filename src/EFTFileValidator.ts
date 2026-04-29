@@ -175,9 +175,9 @@ export class EFTFileValidator {
           );
         }
 
-        if (!/^\d{1,3}$/.test(segment.bankInstitutionNumber)) {
+        if (!/^\d{1,3}$/.test(segment.bankInstitutionNumber) && !segment.bankInstitutionNumber.startsWith('0')) {
           throw new Error(
-            `bankInstitutionNumber should be 1 to 3 digits: ${segment.bankInstitutionNumber}`
+            `bankInstitutionNumber should be 1 to 3 digits and start with '0': ${segment.bankInstitutionNumber}`
           );
         }
 
@@ -218,8 +218,4 @@ export class EFTFileValidator {
 
     return validationWarnings;
   }
-}
-
-export function validateCPA005(builder: EFTFileBuilder): ValidationWarning[] {
-  return new EFTFileValidator(builder).validate();
 }

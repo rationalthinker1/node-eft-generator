@@ -17,9 +17,9 @@ export class EFTGenerator {
   #totalValueCredits = 0;
   #totalNumberCredits = 0;
 
-  constructor(builder: EFTFileBuilder, validator: EFTFileValidator) {
+  constructor(builder: EFTFileBuilder) {
     this.#builder = builder;
-    this.#validator = validator;
+    this.#validator = new EFTFileValidator(builder);
   }
 
   generate(): string {
@@ -243,8 +243,4 @@ export class EFTGenerator {
     this.#totalValueCredits = 0;
     this.#totalNumberCredits = 0;
   }
-}
-
-export function formatToCPA005(builder: EFTFileBuilder): string {
-  return new EFTGenerator(builder, new EFTFileValidator(builder)).generate();
 }

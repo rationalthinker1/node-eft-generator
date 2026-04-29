@@ -1,3 +1,3 @@
 export { EFTFileBuilder } from '#EFTFileBuilder';
-export { cpaTransactionCodes, isCPATransactionCode } from '#cpaCodes/transactions';
+export { cpaTransactionCodes, isCPATransactionCode, CPATransactionCode } from '#cpaCodes/transactions';
 export type * as types from '#types';

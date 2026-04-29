@@ -2,7 +2,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import { describe, it } from 'node:test';
 
-import { validateCPA005 } from '#EFTFileValidator';
+import { EFTFileValidator } from '#EFTFileValidator';
 import { EFTFileBuilder } from '#index';
 import {
   RECORD_TYPE,
@@ -168,7 +168,7 @@ await describe('eft-generator - CPA-005', async () => {
       });
 
       assert.ok(
-        validateCPA005(eftGenerator).some(
+        new EFTFileValidator(eftGenerator).validate().some(
           (validationWarning) =>
             validationWarning.warningField === 'originatorShortName'
         )
@@ -212,7 +212,7 @@ await describe('eft-generator - CPA-005', async () => {
         segments: []
       });
 
-      const validationWarnings = validateCPA005(eftGenerator);
+      const validationWarnings = new EFTFileValidator(eftGenerator).validate();
 
       assert.ok(
         validationWarnings.some(
@@ -290,7 +290,7 @@ await describe('eft-generator - CPA-005', async () => {
         ]
       });
 
-      const validationWarnings = validateCPA005(eftGenerator);
+      const validationWarnings = new EFTFileValidator(eftGenerator).validate();
 
       assert.ok(
         validationWarnings.some(
@@ -418,7 +418,7 @@ await describe('eft-generator - CPA-005', async () => {
       });
 
       assert.ok(
-        validateCPA005(eftGenerator).some(
+        new EFTFileValidator(eftGenerator).validate().some(
           (validationWarning) => validationWarning.warningField === 'payeeName'
         )
       );
@@ -448,7 +448,7 @@ await describe('eft-generator - CPA-005', async () => {
       });
 
       assert.ok(
-        validateCPA005(eftGenerator).some(
+        new EFTFileValidator(eftGenerator).validate().some(
           (validationWarning) =>
             validationWarning.warningField === 'crossReferenceNumber'
         )
@@ -504,7 +504,7 @@ await describe('eft-generator - CPA-005', async () => {
       });
 
       assert.ok(
-        validateCPA005(eftGenerator).some(
+        new EFTFileValidator(eftGenerator).validate().some(
           (validationWarning) =>
             validationWarning.warningField === 'originatorShortName' &&
             validationWarning.warning.toLowerCase().includes('prohibited')
@@ -519,7 +519,7 @@ await describe('eft-generator - CPA-005', async () => {
       });
 
       assert.ok(
-        validateCPA005(eftGenerator).some(
+        new EFTFileValidator(eftGenerator).validate().some(
           (validationWarning) =>
             validationWarning.warningField === 'originatorLongName' &&
             validationWarning.warning.toLowerCase().includes('prohibited')

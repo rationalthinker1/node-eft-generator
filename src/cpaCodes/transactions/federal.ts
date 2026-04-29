@@ -1,6 +1,6 @@
 import type { CPACode, CPACodeString } from '#types';
 
-export const cpaTransactionCodesFederal: Record<CPACodeString, CPACode> = {
+export const cpaTransactionCodesFederal = {
   300: {
     cpaCodeFullName: 'Federal Payment',
     cpaCodeAbbreviationEnglish: 'FED',
@@ -106,4 +106,4 @@ export const cpaTransactionCodesFederal: Record<CPACodeString, CPACode> = {
     cpaCodeAbbreviationEnglish: 'CCR',
     cpaCodeAbbreviationFrench: 'RCC'
   }
-};
+} as const satisfies Record<CPACodeString, CPACode>;

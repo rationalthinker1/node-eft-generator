@@ -17,7 +17,7 @@ export class EFTFileBuilder {
     this.#config = config;
     this.#transactions = [];
     this.#validator = new EFTFileValidator(this);
-    this.#generator = new EFTGenerator(this, this.#validator);
+    this.#generator = new EFTGenerator(this);
   }
 
   getConfiguration(): EFTConfiguration {
