@@ -1,4 +1,3 @@
-import { isCPATransactionCode } from '#cpaCodes/transactions';
 import type { EFTFileBuilder } from '#EFTFileBuilder';
 import {
   TRANSACTION_TYPE,
@@ -84,35 +83,19 @@ export class EFTFileValidator {
       );
     }
 
-    let returnAccountUndefinedCount = 0;
+    // returnInstitutionNumber / returnTransitNumber / returnAccountNumber are
+    // validated at construction time by their branded constructors. Here we
+    // only check the all-or-nothing requirement.
+    const returnFields = [
+      eftConfig.returnInstitutionNumber,
+      eftConfig.returnTransitNumber,
+      eftConfig.returnAccountNumber
+    ];
+    const returnFieldsDefined = returnFields.filter((f) => f !== undefined).length;
 
-    if (eftConfig.returnInstitutionNumber === undefined) {
-      returnAccountUndefinedCount += 1;
-    } else if (!/^\d{1,3}$/.test(eftConfig.returnInstitutionNumber)) {
+    if (returnFieldsDefined > 0 && returnFieldsDefined < returnFields.length) {
       throw new Error(
-        `returnInstitutionNumber should be 1 to 3 digits: ${eftConfig.returnInstitutionNumber}`
-      );
-    }
-
-    if (eftConfig.returnTransitNumber === undefined) {
-      returnAccountUndefinedCount += 1;
-    } else if (!/^\d{1,5}$/.test(eftConfig.returnTransitNumber)) {
-      throw new Error(
-        `returnTransitNumber should be 1 to 3 digits: ${eftConfig.returnTransitNumber}`
-      );
-    }
-
-    if (eftConfig.returnAccountNumber === undefined) {
-      returnAccountUndefinedCount += 1;
-    } else if (!/^\d{1,12}$/.test(eftConfig.returnAccountNumber)) {
-      throw new Error(
-        `returnAccountNumber should be 1 to 3 digits: ${eftConfig.returnAccountNumber}`
-      );
-    }
-
-    if (returnAccountUndefinedCount > 0 && returnAccountUndefinedCount < 3) {
-      throw new Error(
-        'returnInstitutionNumber, returnTransitNumber, and returnAccountNumber must by defined together, or not defined at all.'
+        'returnInstitutionNumber, returnTransitNumber, and returnAccountNumber must be defined together, or not defined at all.'
       );
     }
 
@@ -154,14 +137,8 @@ export class EFTFileValidator {
       }
 
       for (const [transactionSegmentIndex, segment] of transaction.segments.entries()) {
-        if (!isCPATransactionCode(segment.cpaCode)) {
-          validationWarnings.push({
-            transactionIndex,
-            transactionSegmentIndex,
-            warning: `Unknown CPA code: ${segment.cpaCode}`,
-            warningField: 'cpaCode'
-          });
-        }
+        // cpaCode is typed as CPATransactionCode (the literal union of known
+        // codes), so unknown codes are rejected at compile time.
 
         if (segment.amount <= 0) {
           throw new Error(
@@ -175,26 +152,9 @@ export class EFTFileValidator {
           );
         }
 
-        if (
-          !/^\d{1,3}$/.test(segment.bankInstitutionNumber) &&
-          !segment.bankInstitutionNumber.startsWith('0')
-        ) {
-          throw new Error(
-            `bankInstitutionNumber should be 1 to 3 digits and start with '0': ${segment.bankInstitutionNumber}`
-          );
-        }
-
-        if (!/^\d{1,5}$/.test(segment.bankTransitNumber)) {
-          throw new Error(
-            `bankTransitNumber should be 1 to 5 digits: ${segment.bankTransitNumber}`
-          );
-        }
-
-        if (!/^\d{1,12}$/.test(segment.bankAccountNumber)) {
-          throw new Error(
-            `bankAccountNumber should be 1 to 12 digits: ${segment.bankAccountNumber}`
-          );
-        }
+        // bankInstitutionNumber, bankTransitNumber and bankAccountNumber are
+        // already validated at construction time by their branded constructors
+        // (bankInstitution / bankTransit / bankAccount).
 
         if (segment.payeeName.length > 30) {
           validationWarnings.push({

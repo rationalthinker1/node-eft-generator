@@ -1,7 +1,11 @@
+import { FIELD_WIDTHS, RECORD_LENGTH, assertRecordLength, fixedField } from '#cpa005Spec';
 import type { EFTFileBuilder } from '#EFTFileBuilder';
 import { EFTFileValidator } from '#EFTFileValidator';
 import { RECORD_TYPE, TRANSACTION_TYPE, type EFTTransaction } from '#types';
 import { NEWLINE, sanitizeCPA005Text, toPaddedJulianDate } from '#utils';
+
+const RIGHT_ZERO = { align: 'right', pad: '0' } as const;
+const LEFT_SPACE = { align: 'left', pad: ' ' } as const;
 
 export class EFTFileGenerator {
   readonly #builder: EFTFileBuilder;
@@ -47,36 +51,45 @@ export class EFTFileGenerator {
       eftConfig.fileCreationDate ?? new Date()
     );
 
-    let dataCentre = ''.padEnd(5, ' ');
-    if (eftConfig.destinationDataCentre !== undefined) {
-      dataCentre = eftConfig.destinationDataCentre.padStart(5, '0');
-    }
+    const dataCentre =
+      eftConfig.destinationDataCentre === undefined
+        ? fixedField('', FIELD_WIDTHS.dataCentre, LEFT_SPACE)
+        : fixedField(
+            eftConfig.destinationDataCentre,
+            FIELD_WIDTHS.dataCentre,
+            RIGHT_ZERO
+          );
 
-    let destinationCurrency = ''.padEnd(3, ' ');
-    if (eftConfig.destinationCurrency !== undefined) {
-      destinationCurrency = eftConfig.destinationCurrency;
-    }
+    const destinationCurrency =
+      eftConfig.destinationCurrency === undefined
+        ? fixedField('', FIELD_WIDTHS.currency, LEFT_SPACE)
+        : fixedField(eftConfig.destinationCurrency, FIELD_WIDTHS.currency, LEFT_SPACE);
 
-    return (
+    const record =
       // Logical Record Type Id
       RECORD_TYPE.HEADER +
       // Logical Record Count
-      '1'.padStart(9, '0') +
+      fixedField('1', FIELD_WIDTHS.logicalRecordCount, RIGHT_ZERO) +
       // Originator's Id / Client Number
-      eftConfig.originatorId.padEnd(10, ' ') +
+      fixedField(eftConfig.originatorId, FIELD_WIDTHS.originatorId, LEFT_SPACE) +
       // File Creation Number
-      eftConfig.fileCreationNumber.padStart(4, '0').slice(-4) +
+      fixedField(
+        eftConfig.fileCreationNumber,
+        FIELD_WIDTHS.fileCreationNumber,
+        RIGHT_ZERO
+      ) +
       // Creation Date (0YYDDD)
       fileCreationJulianDate +
       // Destination Data Centre
       dataCentre +
       // Reserved Customer Direct Clearer Communication Area
-      ''.padEnd(20, ' ') +
+      fixedField('', FIELD_WIDTHS.reservedHeader, LEFT_SPACE) +
       // Currency Code Identifier
       destinationCurrency +
       // Filler
-      ''.padEnd(1406, ' ')
-    );
+      fixedField('', FIELD_WIDTHS.headerFiller, LEFT_SPACE);
+
+    return assertRecordLength(record, 'header');
   }
 
   /**
@@ -92,7 +105,7 @@ export class EFTFileGenerator {
     for (const [segmentIndex, segment] of transaction.segments.entries()) {
       if (segmentIndex % 6 === 0) {
         if (segmentIndex > 0) {
-          lines.push(record);
+          lines.push(assertRecordLength(record, 'transaction'));
         }
 
         this.#recordCount += 1;
@@ -107,10 +120,18 @@ export class EFTFileGenerator {
           // Logical Record Type Id
           transaction.recordType +
           // Logical Record Count
-          this.#recordCount.toString().padStart(9, '0') +
+          fixedField(
+            this.#recordCount.toString(),
+            FIELD_WIDTHS.logicalRecordCount,
+            RIGHT_ZERO
+          ) +
           // Origination Control Data
-          eftConfig.originatorId.padEnd(10, ' ') +
-          eftConfig.fileCreationNumber.padStart(4, '0');
+          fixedField(eftConfig.originatorId, FIELD_WIDTHS.originatorId, LEFT_SPACE) +
+          fixedField(
+            eftConfig.fileCreationNumber,
+            FIELD_WIDTHS.fileCreationNumber,
+            RIGHT_ZERO
+          );
       }
 
       const paymentJulianDate = toPaddedJulianDate(segment.paymentDate ?? new Date());
@@ -138,46 +159,72 @@ export class EFTFileGenerator {
 
       record +=
         // Transaction Type
-        segment.cpaCode +
+        fixedField(segment.cpaCode, FIELD_WIDTHS.cpaCode, RIGHT_ZERO) +
         // Amount
-        Math.round(segment.amount * 100)
-          .toString()
-          .padStart(10, '0') +
+        fixedField(
+          Math.round(segment.amount * 100).toString(),
+          FIELD_WIDTHS.amount,
+          RIGHT_ZERO
+        ) +
         // Credit: Date Funds to be Available
         // Debit: Due Date
         paymentJulianDate +
         // Institutional Identification Number (9 digits)
-        ''.padStart(1, '0') +
-        segment.bankInstitutionNumber.padStart(3, '0') +
-        segment.bankTransitNumber.padStart(5, '0') +
+        fixedField('', FIELD_WIDTHS.institutionalIdLead, RIGHT_ZERO) +
+        fixedField(
+          segment.bankInstitutionNumber,
+          FIELD_WIDTHS.institutionNumber,
+          RIGHT_ZERO
+        ) +
+        fixedField(segment.bankTransitNumber, FIELD_WIDTHS.transitNumber, RIGHT_ZERO) +
         // Credit: Payee Account Number
         // Debit: Payor Account Number
-        segment.bankAccountNumber.padEnd(12, ' ') +
+        fixedField(segment.bankAccountNumber, FIELD_WIDTHS.accountNumber, LEFT_SPACE) +
         // Filler (zeros)
-        ''.padStart(25, '0') +
+        fixedField('', FIELD_WIDTHS.segmentFillerZeros, RIGHT_ZERO) +
         // Originator's Short Name
-        sanitizeCPA005Text(originatorShortName).padEnd(15, ' ').slice(0, 15) +
+        sanitizeCPA005Text(originatorShortName)
+          .padEnd(FIELD_WIDTHS.originatorShortName, ' ')
+          .slice(0, FIELD_WIDTHS.originatorShortName) +
         // Credit: Payee Name
         // Debit: Payor Name
-        sanitizeCPA005Text(segment.payeeName).padEnd(30, ' ').slice(0, 30) +
+        sanitizeCPA005Text(segment.payeeName)
+          .padEnd(FIELD_WIDTHS.payeeName, ' ')
+          .slice(0, FIELD_WIDTHS.payeeName) +
         // Originator's Long Name
-        sanitizeCPA005Text(eftConfig.originatorLongName).padEnd(30, ' ').slice(0, 30) +
+        sanitizeCPA005Text(eftConfig.originatorLongName)
+          .padEnd(FIELD_WIDTHS.originatorLongName, ' ')
+          .slice(0, FIELD_WIDTHS.originatorLongName) +
         // Filler (positions 165-174)
-        ''.padEnd(10, ' ') +
+        fixedField('', FIELD_WIDTHS.segmentFillerBlanks, LEFT_SPACE) +
         // Cross Reference Number
-        sanitizeCPA005Text(crossReferenceNumber).padEnd(19, ' ').slice(0, 19) +
+        sanitizeCPA005Text(crossReferenceNumber)
+          .padEnd(FIELD_WIDTHS.crossReference, ' ')
+          .slice(0, FIELD_WIDTHS.crossReference) +
         // Institutional ID Number for Returns
-        ''.padStart(1, '0') +
+        fixedField('', FIELD_WIDTHS.institutionalIdLead, RIGHT_ZERO) +
         // Institution Number for Returns
         (eftConfig.returnInstitutionNumber === undefined
-          ? ''.padEnd(3, ' ')
-          : eftConfig.returnInstitutionNumber.padStart(3, '0')) +
+          ? fixedField('', FIELD_WIDTHS.institutionNumber, LEFT_SPACE)
+          : fixedField(
+              eftConfig.returnInstitutionNumber,
+              FIELD_WIDTHS.institutionNumber,
+              RIGHT_ZERO
+            )) +
         // Transit Number for Returns
         (eftConfig.returnTransitNumber === undefined
-          ? ''.padEnd(5, ' ')
-          : eftConfig.returnTransitNumber.padStart(5, '0')) +
+          ? fixedField('', FIELD_WIDTHS.transitNumber, LEFT_SPACE)
+          : fixedField(
+              eftConfig.returnTransitNumber,
+              FIELD_WIDTHS.transitNumber,
+              RIGHT_ZERO
+            )) +
         // Account Number for Returns
-        (eftConfig.returnAccountNumber ?? '').padEnd(12, ' ') +
+        fixedField(
+          eftConfig.returnAccountNumber ?? '',
+          FIELD_WIDTHS.accountNumber,
+          LEFT_SPACE
+        ) +
         trailingFiller;
 
       if (transaction.recordType === TRANSACTION_TYPE.CREDIT) {
@@ -188,7 +235,9 @@ export class EFTFileGenerator {
     }
 
     if (record !== '') {
-      lines.push(record.padEnd(1464, ' '));
+      // Pad the final record (which may have fewer than 6 segments) up to
+      // RECORD_LENGTH, then assert the result.
+      lines.push(assertRecordLength(record.padEnd(RECORD_LENGTH, ' '), 'transaction'));
     }
 
     return lines;
@@ -197,29 +246,50 @@ export class EFTFileGenerator {
   generateTrailer(): string {
     const eftConfig = this.#builder.getConfiguration();
 
-    return (
+    const record =
       // Logical Record Type Id
       RECORD_TYPE.TRAILER +
       // Logical Record Count
-      (this.#recordCount + 1).toString().padStart(9, '0') +
+      fixedField(
+        (this.#recordCount + 1).toString(),
+        FIELD_WIDTHS.logicalRecordCount,
+        RIGHT_ZERO
+      ) +
       // Origination Control Data
-      eftConfig.originatorId.padEnd(10, ' ') +
-      eftConfig.fileCreationNumber.padStart(4, '0').slice(-4) +
+      fixedField(eftConfig.originatorId, FIELD_WIDTHS.originatorId, LEFT_SPACE) +
+      fixedField(
+        eftConfig.fileCreationNumber,
+        FIELD_WIDTHS.fileCreationNumber,
+        RIGHT_ZERO
+      ) +
       // Total Value of Debit Transactions
-      Math.round(this.#totalValueDebits * 100)
-        .toString()
-        .padStart(14, '0') +
+      fixedField(
+        Math.round(this.#totalValueDebits * 100).toString(),
+        FIELD_WIDTHS.totalValueDebits,
+        RIGHT_ZERO
+      ) +
       // Total Number of Debit Transactions
-      this.#totalNumberDebits.toString().padStart(8, '0') +
+      fixedField(
+        this.#totalNumberDebits.toString(),
+        FIELD_WIDTHS.totalNumberDebits,
+        RIGHT_ZERO
+      ) +
       // Total Value of Credit Transactions
-      Math.round(this.#totalValueCredits * 100)
-        .toString()
-        .padStart(14, '0') +
+      fixedField(
+        Math.round(this.#totalValueCredits * 100).toString(),
+        FIELD_WIDTHS.totalValueCredits,
+        RIGHT_ZERO
+      ) +
       // Total Number of Credit Transactions
-      this.#totalNumberCredits.toString().padStart(8, '0') +
+      fixedField(
+        this.#totalNumberCredits.toString(),
+        FIELD_WIDTHS.totalNumberCredits,
+        RIGHT_ZERO
+      ) +
       // Filler (positions 69-1464)
-      ''.padEnd(1396, ' ')
-    );
+      fixedField('', FIELD_WIDTHS.trailerFiller, LEFT_SPACE);
+
+    return assertRecordLength(record, 'trailer');
   }
 
   #resetCounters(): void {

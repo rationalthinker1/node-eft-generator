@@ -1,4 +1,4 @@
-import type { CPACode, CPACodeString } from '#types';
+import type { CPACode, CPACodeNumber } from '#types';
 
 export const cpaTransactionCodesCommercial = {
   701: {
@@ -156,4 +156,4 @@ export const cpaTransactionCodesCommercial = {
     cpaCodeAbbreviationEnglish: 'CRI',
     cpaCodeAbbreviationFrench: 'ARC'
   }
-} as const satisfies Record<CPACodeString, CPACode>;
+} as const satisfies Record<CPACodeNumber, CPACode>;
