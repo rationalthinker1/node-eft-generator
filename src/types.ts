@@ -1,4 +1,4 @@
-import type { BankAccount, BankInstitution, BankTransit } from '#brands';
+import type { BankAccount, BankInstitution, BankTransit } from '#bankPADInformation';
 import type { CPATransactionCode } from '#cpaCodes/transactions';
 
 export interface EFTConfiguration {

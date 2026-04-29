@@ -18,18 +18,50 @@ export type BankInstitution = BankPADInformation<'BankInstitution'>;
 export type BankTransit = BankPADInformation<'BankTransit'>;
 export type BankAccount = BankPADInformation<'BankAccount'>;
 
-const INSTITUTION_PATTERN = /^\d{3}$/;
 const TRANSIT_PATTERN = /^\d{5}$/;
 const ACCOUNT_PATTERN = /^\d{5,12}$/;
 
 /**
- * 3-digit financial institution number (e.g. "003" RBC, "001" BMO,
- * "010" CIBC, "004" TD, plus credit unions and others that may not
- * begin with a leading zero).
+ * Recognised Canadian 3-digit financial institution numbers, as published
+ * by Payments Canada. Update this set when onboarding a new FI.
+ */
+const VALID_INSTITUTIONS: ReadonlySet<string> = new Set([
+  '001', // BMO
+  '002', // Scotia
+  '003', // RBC
+  '004', // TD
+  '006', // National Bank
+  '010', // CIBC
+  '016', // HSBC
+  '030', // Canadian Western
+  '039', // Laurentian
+  '177', // Bank of Canada
+  '219', // ATB Financial
+  '260', // Citibank Canada
+  '326', // PC Financial
+  '338', // Canadian Tire Bank
+  '340', // ICICI
+  '352', // Manulife Bank
+  '540', // Manulife Bank
+  '614', // ICICI
+  '809', // Central 1 (BC/ON)
+  '815', // Caisse Pop. (Desjardins)
+  '828', // Central 1 - ON CUs
+  '829', // Desjardins
+  '837', // Meridian / OEECU
+  '839', // Heritage CU
+  '849', // Caisses populaires acadiennes
+  '879' // Various credit unions
+]);
+
+/**
+ * 3-digit financial institution number, validated against the
+ * known-good Canadian FI list (e.g. "003" RBC, "001" BMO, "010" CIBC,
+ * "004" TD).
  */
 export function bankInstitution(value: string): BankInstitution {
-  if (!INSTITUTION_PATTERN.test(value)) {
-    throw new Error(`bankInstitutionNumber must be exactly 3 digits: "${value}"`);
+  if (!VALID_INSTITUTIONS.has(value)) {
+    throw new Error(`bankInstitutionNumber is not a recognised Canadian FI: "${value}"`);
   }
   return value as BankInstitution;
 }

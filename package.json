@@ -39,7 +39,7 @@
   "files": [
     "build/index.*",
     "build/types.*",
-    "build/brands.*",
+    "build/bankPADInformation.*",
     "build/cpa005Spec.*",
     "build/EFTFileBuilder.*",
     "build/EFTFileValidator.*",

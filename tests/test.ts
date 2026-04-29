@@ -16,7 +16,7 @@ const config: EFTConfiguration = {
   destinationCurrency: 'CAD',
   destinationDataCentre: '123',
 
-  returnInstitutionNumber: bankInstitution('111'),
+  returnInstitutionNumber: bankInstitution('003'),
   returnTransitNumber: bankTransit('22222'),
   returnAccountNumber: bankAccount('333333333333')
 };
@@ -24,7 +24,7 @@ const config: EFTConfiguration = {
 const cpaCodePropertyTaxes: CPATransactionCode = '385';
 
 const validBank = {
-  bankInstitutionNumber: bankInstitution('111'),
+  bankInstitutionNumber: bankInstitution('003'),
   bankTransitNumber: bankTransit('22222'),
   bankAccountNumber: bankAccount('333333333')
 };
@@ -45,7 +45,7 @@ await describe('eft-generator - CPA-005', async () => {
           payeeName: 'Test Property Owner'
         },
         {
-          bankInstitutionNumber: bankInstitution('222'),
+          bankInstitutionNumber: bankInstitution('004'),
           bankTransitNumber: bankTransit('33333'),
           bankAccountNumber: bankAccount('4444444444'),
           cpaCode: cpaCodePropertyTaxes,
@@ -67,7 +67,7 @@ await describe('eft-generator - CPA-005', async () => {
           payeeName: 'Test Property Owner'
         },
         {
-          bankInstitutionNumber: bankInstitution('222'),
+          bankInstitutionNumber: bankInstitution('004'),
           bankTransitNumber: bankTransit('33333'),
           bankAccountNumber: bankAccount('4444444444'),
           cpaCode: cpaCodePropertyTaxes,
@@ -178,18 +178,21 @@ await describe('eft-generator - CPA-005', async () => {
   });
 
   await describe('Brand constructors', async () => {
-    await it('bankInstitution throws on values that are not exactly 3 digits', () => {
+    await it('bankInstitution throws on values not in the recognised FI set', () => {
       assert.throws(() => bankInstitution('1'));
       assert.throws(() => bankInstitution('12'));
       assert.throws(() => bankInstitution('1234'));
       assert.throws(() => bankInstitution('abc'));
       assert.throws(() => bankInstitution('a1b'));
+      // 3-digit but not a known Canadian FI
+      assert.throws(() => bankInstitution('111'));
+      assert.throws(() => bankInstitution('999'));
     });
 
-    await it('bankInstitution accepts any 3-digit value', () => {
-      assert.strictEqual(bankInstitution('001'), '001');
-      assert.strictEqual(bankInstitution('111'), '111');
-      assert.strictEqual(bankInstitution('999'), '999');
+    await it('bankInstitution accepts known Canadian FI codes', () => {
+      assert.strictEqual(bankInstitution('001'), '001'); // BMO
+      assert.strictEqual(bankInstitution('003'), '003'); // RBC
+      assert.strictEqual(bankInstitution('010'), '010'); // CIBC
     });
 
     await it('bankTransit throws unless the value is exactly 5 digits', () => {
