@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { describe, it } from 'node:test';
 
 import { EFTFileValidator } from '#EFTFileValidator';
-import { EFTFileBuilder, account5to12, institution3, transit5 } from '#index';
+import { EFTFileBuilder, bankAccount, bankInstitution, bankTransit } from '#index';
 import { RECORD_TYPE, TRANSACTION_TYPE, type EFTConfiguration } from '#types';
 import type { CPATransactionCode } from '#cpaCodes/transactions';
 import { NEWLINE as cpa005_newline } from '#utils';
@@ -16,17 +16,17 @@ const config: EFTConfiguration = {
   destinationCurrency: 'CAD',
   destinationDataCentre: '123',
 
-  returnInstitutionNumber: institution3('111'),
-  returnTransitNumber: transit5('22222'),
-  returnAccountNumber: account5to12('333333333333')
+  returnInstitutionNumber: bankInstitution('111'),
+  returnTransitNumber: bankTransit('22222'),
+  returnAccountNumber: bankAccount('333333333333')
 };
 
 const cpaCodePropertyTaxes: CPATransactionCode = '385';
 
 const validBank = {
-  bankInstitutionNumber: institution3('111'),
-  bankTransitNumber: transit5('22222'),
-  bankAccountNumber: account5to12('333333333')
+  bankInstitutionNumber: bankInstitution('111'),
+  bankTransitNumber: bankTransit('22222'),
+  bankAccountNumber: bankAccount('333333333')
 };
 
 await describe('eft-generator - CPA-005', async () => {
@@ -45,9 +45,9 @@ await describe('eft-generator - CPA-005', async () => {
           payeeName: 'Test Property Owner'
         },
         {
-          bankInstitutionNumber: institution3('222'),
-          bankTransitNumber: transit5('33333'),
-          bankAccountNumber: account5to12('4444444444'),
+          bankInstitutionNumber: bankInstitution('222'),
+          bankTransitNumber: bankTransit('33333'),
+          bankAccountNumber: bankAccount('4444444444'),
           cpaCode: cpaCodePropertyTaxes,
           amount: 2345.67,
           payeeName: 'Test Property Owner 2'
@@ -67,9 +67,9 @@ await describe('eft-generator - CPA-005', async () => {
           payeeName: 'Test Property Owner'
         },
         {
-          bankInstitutionNumber: institution3('222'),
-          bankTransitNumber: transit5('33333'),
-          bankAccountNumber: account5to12('4444444444'),
+          bankInstitutionNumber: bankInstitution('222'),
+          bankTransitNumber: bankTransit('33333'),
+          bankAccountNumber: bankAccount('4444444444'),
           cpaCode: cpaCodePropertyTaxes,
           amount: 2345.67,
           payeeName: 'Test Property Owner 2'
@@ -178,37 +178,37 @@ await describe('eft-generator - CPA-005', async () => {
   });
 
   await describe('Brand constructors', async () => {
-    await it('institution3 throws on values that are not exactly 3 digits', () => {
-      assert.throws(() => institution3('1'));
-      assert.throws(() => institution3('12'));
-      assert.throws(() => institution3('1234'));
-      assert.throws(() => institution3('abc'));
-      assert.throws(() => institution3('a1b'));
+    await it('bankInstitution throws on values that are not exactly 3 digits', () => {
+      assert.throws(() => bankInstitution('1'));
+      assert.throws(() => bankInstitution('12'));
+      assert.throws(() => bankInstitution('1234'));
+      assert.throws(() => bankInstitution('abc'));
+      assert.throws(() => bankInstitution('a1b'));
     });
 
-    await it('institution3 accepts any 3-digit value', () => {
-      assert.strictEqual(institution3('001'), '001');
-      assert.strictEqual(institution3('111'), '111');
-      assert.strictEqual(institution3('999'), '999');
+    await it('bankInstitution accepts any 3-digit value', () => {
+      assert.strictEqual(bankInstitution('001'), '001');
+      assert.strictEqual(bankInstitution('111'), '111');
+      assert.strictEqual(bankInstitution('999'), '999');
     });
 
-    await it('transit5 throws unless the value is exactly 5 digits', () => {
-      assert.throws(() => transit5('1'));
-      assert.throws(() => transit5('1234'));
-      assert.throws(() => transit5('123456'));
-      assert.throws(() => transit5('abcde'));
+    await it('bankTransit throws unless the value is exactly 5 digits', () => {
+      assert.throws(() => bankTransit('1'));
+      assert.throws(() => bankTransit('1234'));
+      assert.throws(() => bankTransit('123456'));
+      assert.throws(() => bankTransit('abcde'));
     });
 
-    await it('account5to12 throws on values shorter than 5 or longer than 12', () => {
-      assert.throws(() => account5to12('1'));
-      assert.throws(() => account5to12('1234'));
-      assert.throws(() => account5to12('1234567890123'));
-      assert.throws(() => account5to12('abcd1234'));
+    await it('bankAccount throws on values shorter than 5 or longer than 12', () => {
+      assert.throws(() => bankAccount('1'));
+      assert.throws(() => bankAccount('1234'));
+      assert.throws(() => bankAccount('1234567890123'));
+      assert.throws(() => bankAccount('abcd1234'));
     });
 
-    await it('account5to12 accepts 5- to 12-digit numerics', () => {
-      assert.strictEqual(account5to12('12345'), '12345');
-      assert.strictEqual(account5to12('123456789012'), '123456789012');
+    await it('bankAccount accepts 5- to 12-digit numerics', () => {
+      assert.strictEqual(bankAccount('12345'), '12345');
+      assert.strictEqual(bankAccount('123456789012'), '123456789012');
     });
   });
 
@@ -263,7 +263,7 @@ await describe('eft-generator - CPA-005', async () => {
 
       const segment = {
         ...validBank,
-        bankAccountNumber: account5to12('3333333'),
+        bankAccountNumber: bankAccount('3333333'),
         cpaCode: cpaCodePropertyTaxes,
         payeeName: 'Test Property Owner'
       } as const;

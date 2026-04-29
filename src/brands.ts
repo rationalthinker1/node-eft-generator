@@ -13,9 +13,9 @@ type Branded<TBrand extends string> = string & {
   readonly [__digitsBrand]: TBrand;
 };
 
-export type Institution3 = Branded<'Institution3'>;
-export type Transit5 = Branded<'Transit5'>;
-export type Account5to12 = Branded<'Account5to12'>;
+export type BankInstitution = Branded<'BankInstitution'>;
+export type BankTransit = Branded<'BankTransit'>;
+export type BankAccount = Branded<'BankAccount'>;
 
 const INSTITUTION_PATTERN = /^\d{3}$/;
 const TRANSIT_PATTERN = /^\d{5}$/;
@@ -26,29 +26,29 @@ const ACCOUNT_PATTERN = /^\d{5,12}$/;
  * "010" CIBC, "004" TD, plus credit unions and others that may not
  * begin with a leading zero).
  */
-export function institution3(value: string): Institution3 {
+export function bankInstitution(value: string): BankInstitution {
   if (!INSTITUTION_PATTERN.test(value)) {
     throw new Error(`bankInstitutionNumber must be exactly 3 digits: "${value}"`);
   }
-  return value as Institution3;
+  return value as BankInstitution;
 }
 
 /**
  * 5-digit branch / transit number.
  */
-export function transit5(value: string): Transit5 {
+export function bankTransit(value: string): BankTransit {
   if (!TRANSIT_PATTERN.test(value)) {
     throw new Error(`bankTransitNumber must be exactly 5 digits: "${value}"`);
   }
-  return value as Transit5;
+  return value as BankTransit;
 }
 
 /**
  * 5-12 digit account number.
  */
-export function account5to12(value: string): Account5to12 {
+export function bankAccount(value: string): BankAccount {
   if (!ACCOUNT_PATTERN.test(value)) {
     throw new Error(`bankAccountNumber must be 5 to 12 digits: "${value}"`);
   }
-  return value as Account5to12;
+  return value as BankAccount;
 }

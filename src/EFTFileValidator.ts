@@ -154,7 +154,7 @@ export class EFTFileValidator {
 
         // bankInstitutionNumber, bankTransitNumber and bankAccountNumber are
         // already validated at construction time by their branded constructors
-        // (institution3 / transit5 / account5to12).
+        // (bankInstitution / bankTransit / bankAccount).
 
         if (segment.payeeName.length > 30) {
           validationWarnings.push({

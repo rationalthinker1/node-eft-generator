@@ -1,4 +1,4 @@
-import type { Account5to12, Institution3, Transit5 } from '#brands';
+import type { BankAccount, BankInstitution, BankTransit } from '#brands';
 import type { CPATransactionCode } from '#cpaCodes/transactions';
 
 export interface EFTConfiguration {
@@ -32,9 +32,9 @@ export interface EFTConfiguration {
 
   destinationCurrency?: 'CAD' | 'USD';
 
-  returnInstitutionNumber?: Institution3;
-  returnTransitNumber?: Transit5;
-  returnAccountNumber?: Account5to12;
+  returnInstitutionNumber?: BankInstitution;
+  returnTransitNumber?: BankTransit;
+  returnAccountNumber?: BankAccount;
 }
 
 export const TRANSACTION_TYPE = {
@@ -75,9 +75,9 @@ export interface EFTTransactionSegment {
    */
   paymentDate?: Date;
 
-  bankInstitutionNumber: Institution3;
-  bankTransitNumber: Transit5;
-  bankAccountNumber: Account5to12;
+  bankInstitutionNumber: BankInstitution;
+  bankTransitNumber: BankTransit;
+  bankAccountNumber: BankAccount;
 
   payeeName: string;
 
