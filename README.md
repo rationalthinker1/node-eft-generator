@@ -23,7 +23,9 @@ yarn add @rationalthinker1/eft-generator
 
 ```javascript
 import fs from 'node:fs'
-import { EFTFileBuilder } from '@rationalthinker1/eft-generator'
+import { BankPADInformation, EFTFileBuilder } from '@rationalthinker1/eft-generator'
+
+const { bankInstitution, bankTransit, bankAccount } = BankPADInformation
 
 const eftFile = new EFTFileBuilder({
   originatorId: '0123456789',
@@ -33,18 +35,46 @@ const eftFile = new EFTFileBuilder({
 })
 
 eftFile.addDebitTransaction({
-  bankInstitutionNumber: '111',
-  bankTransitNumber: '22222',
-  bankAccountNumber: '333333333',
-  cpaCode: 385, // Property Taxes
+  bankInstitutionNumber: bankInstitution('003'), // RBC
+  bankTransitNumber: bankTransit('22222'),
+  bankAccountNumber: bankAccount('333333333'),
+  cpaCode: '385', // Property Taxes
   amount: 1234.56,
   payeeName: 'Test Property Owner'
 })
 
+// `generate()` runs the strict validator first; any spec violation
+// throws before any output is written.
 const output = eftFile.generate()
 
 fs.writeFileSync('cpa005.txt', output)
 ```
+
+The validator can also be invoked directly:
+
+```javascript
+eftFile.validate() // returns void; throws on any violation
+```
+
+## Migrating from 2.x to 3.x
+
+- Digit fields (`bankInstitutionNumber`, `bankTransitNumber`, `bankAccountNumber`,
+  and the `return*Number` config fields) are now branded types. Construct them
+  via `BankPADInformation.bankInstitution(...)`, `.bankTransit(...)`,
+  `.bankAccount(...)`. Bank institution numbers are validated against the
+  Payments Canada FI list.
+- `cpaCode` is the literal string union `CPATransactionCode`; only known codes
+  type-check.
+
+## Migrating from 3.x to 4.x
+
+- `EFTFileBuilder.validate()` now returns `void` and throws on any spec
+  violation. Catch the thrown `Error` if you need a boolean.
+- The validator is strict: prohibited characters, oversized names, duplicate
+  cross-reference numbers, empty transactions, segments-per-record overflow,
+  and out-of-range payment dates (more than 173 days from `fileCreationDate`)
+  all throw instead of warn.
+- `originatorShortName` is no longer auto-defaulted to `originatorLongName`.
 
 ## Migrating from 1.x to 2.x
 

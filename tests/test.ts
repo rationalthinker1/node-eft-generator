@@ -2,11 +2,12 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import { describe, it } from 'node:test';
 
-import { EFTFileValidator } from '#EFTFileValidator';
-import { EFTFileBuilder, bankAccount, bankInstitution, bankTransit } from '#index';
+import { BankPADInformation, EFTFileBuilder, EFTFileValidator } from '#index';
 import { RECORD_TYPE, TRANSACTION_TYPE, type EFTConfiguration } from '#types';
 import type { CPATransactionCode } from '#cpaCodes/transactions';
 import { NEWLINE as cpa005_newline } from '#utils';
+
+const { bankAccount, bankInstitution, bankTransit } = BankPADInformation;
 
 const config: EFTConfiguration = {
   originatorId: '0123456789',
@@ -79,11 +80,9 @@ await describe('eft-generator - CPA-005', async () => {
 
     assert.strictEqual(eftGenerator.getTransactions().length, 2);
 
-    try {
-      assert.ok(eftGenerator.validate());
-    } catch (error) {
-      console.log(error);
-    }
+    assert.doesNotThrow(() => {
+      eftGenerator.validate();
+    });
 
     const output = eftGenerator.generate();
 
@@ -99,80 +98,68 @@ await describe('eft-generator - CPA-005', async () => {
     }
   });
 
-  await describe('Configuration errors and warnings', async () => {
-    await it('Throws error when originatorId length is too long.', () => {
+  await describe('Configuration validation', async () => {
+    await it('throws when originatorId length is too long', () => {
       const eftGenerator = new EFTFileBuilder({
         originatorId: '12345678901234567890',
+        originatorShortName: 'X',
         originatorLongName: '',
         fileCreationNumber: '0001'
       });
-
-      try {
+      assert.throws(() => {
         eftGenerator.generate();
-        assert.fail();
-      } catch {
-        assert.ok(true);
-      }
+      });
     });
 
-    await it('Throws error when fileCreationNumber is invalid.', () => {
+    await it('throws when fileCreationNumber is invalid', () => {
       const eftGenerator = new EFTFileBuilder({
         originatorId: '1',
+        originatorShortName: 'X',
         originatorLongName: '',
         fileCreationNumber: 'abcdefg'
       });
-
-      try {
+      assert.throws(() => {
         eftGenerator.generate();
-        assert.fail();
-      } catch {
-        assert.ok(true);
-      }
+      });
     });
 
-    await it('Throws error when destinationDataCentre is invalid.', () => {
+    await it('throws when destinationDataCentre is invalid', () => {
       const eftGenerator = new EFTFileBuilder({
         originatorId: '1',
+        originatorShortName: 'X',
         originatorLongName: 'Name',
         fileCreationNumber: '1234',
         destinationDataCentre: '1234567'
       });
-
-      try {
+      assert.throws(() => {
         eftGenerator.generate();
-        assert.fail();
-      } catch {
-        assert.ok(true);
-      }
+      });
     });
 
-    await it('Throws error when destinationCurrency is invalid.', () => {
+    await it('throws when destinationCurrency is invalid', () => {
       const eftGenerator = new EFTFileBuilder({
         originatorId: '1',
+        originatorShortName: 'X',
         originatorLongName: 'Name',
         fileCreationNumber: '1234',
         // @ts-expect-error - intentionally invalid to verify validation
         destinationCurrency: 'AUD'
       });
-
-      assert.ok(!eftGenerator.validate());
+      assert.throws(() => {
+        eftGenerator.validate();
+      });
     });
 
-    await it('Warns on missing originatorShortName', () => {
+    await it('throws when originatorShortName is missing', () => {
       const eftGenerator = new EFTFileBuilder({
         originatorId: '01',
         originatorLongName:
           'This name exceeds the 30 character limit and will be truncated.',
         fileCreationNumber: '0001'
       });
-
-      assert.ok(
-        new EFTFileValidator(eftGenerator)
-          .validate()
-          .some(
-            (validationWarning) =>
-              validationWarning.warningField === 'originatorShortName'
-          )
+      assert.throws(
+        () => new EFTFileValidator(eftGenerator).validate(),
+        /originatorShortName is required/
       );
     });
   });
@@ -184,7 +171,6 @@ await describe('eft-generator - CPA-005', async () => {
       assert.throws(() => bankInstitution('1234'));
       assert.throws(() => bankInstitution('abc'));
       assert.throws(() => bankInstitution('a1b'));
-      // 3-digit but not a known Canadian FI
       assert.throws(() => bankInstitution('111'));
       assert.throws(() => bankInstitution('999'));
     });
@@ -215,10 +201,9 @@ await describe('eft-generator - CPA-005', async () => {
     });
   });
 
-  await describe('Transaction errors and warnings', async () => {
-    await it('Throws error when recordType is unsupported', () => {
+  await describe('Transaction validation', async () => {
+    await it('throws when recordType is unsupported', () => {
       const eftGenerator = new EFTFileBuilder(config);
-
       eftGenerator.addTransaction({
         // @ts-expect-error - intentionally invalid to verify validation
         recordType: 'E',
@@ -231,46 +216,37 @@ await describe('eft-generator - CPA-005', async () => {
           }
         ]
       });
-
-      try {
+      assert.throws(() => {
         eftGenerator.generate();
-        assert.fail();
-      } catch {
-        assert.ok(true);
-      }
+      });
     });
 
-    await it('Warns when there are no segments on a transaction.', () => {
+    await it('throws when there are no transactions in the file', () => {
       const eftGenerator = new EFTFileBuilder(config);
+      assert.throws(() => {
+        eftGenerator.generate();
+      }, /no transactions/i);
+    });
 
+    await it('throws when a transaction has no segments', () => {
+      const eftGenerator = new EFTFileBuilder(config);
       eftGenerator.addTransaction({
         recordType: TRANSACTION_TYPE.DEBIT,
         segments: []
       });
-
-      const validationWarnings = new EFTFileValidator(eftGenerator).validate();
-
-      assert.ok(
-        validationWarnings.some(
-          (validationWarning) => validationWarning.warningField === 'segments'
-        )
-      );
-
-      const output = eftGenerator.generate();
-
-      assert.ok(output.length > 0);
+      assert.throws(() => {
+        eftGenerator.generate();
+      }, /no segments/);
     });
 
-    await it('Warns when there are more than six segments on a transaction.', () => {
+    await it('throws when a transaction has more than six segments', () => {
       const eftGenerator = new EFTFileBuilder(config);
-
       const segment = {
         ...validBank,
         bankAccountNumber: bankAccount('3333333'),
         cpaCode: cpaCodePropertyTaxes,
         payeeName: 'Test Property Owner'
       } as const;
-
       eftGenerator.addTransaction({
         recordType: TRANSACTION_TYPE.DEBIT,
         segments: [
@@ -283,107 +259,92 @@ await describe('eft-generator - CPA-005', async () => {
           { ...segment, amount: 100.07 }
         ]
       });
-
-      const validationWarnings = new EFTFileValidator(eftGenerator).validate();
-
-      assert.ok(
-        validationWarnings.some(
-          (validationWarning) => validationWarning.warningField === 'segments'
-        )
-      );
-
-      const output = eftGenerator.generate();
-
-      assert.ok(output.length > 0);
+      assert.throws(() => {
+        eftGenerator.generate();
+      }, /more than 6 segments/);
     });
 
-    await it('Throws error when a transaction has a negative amount.', () => {
+    await it('throws when a transaction has a negative amount', () => {
       const eftGenerator = new EFTFileBuilder(config);
-
       eftGenerator.addDebitTransaction({
         ...validBank,
         payeeName: 'Negative Amount',
         amount: -2,
         cpaCode: cpaCodePropertyTaxes
       });
-
-      try {
+      assert.throws(() => {
         eftGenerator.generate();
-        assert.fail();
-      } catch {
-        assert.ok(true);
-      }
+      });
     });
 
-    await it('Throws error when a transaction has too large of an amount', () => {
+    await it('throws when a transaction amount is too large', () => {
       const eftGenerator = new EFTFileBuilder(config);
-
       eftGenerator.addDebitTransaction({
         ...validBank,
         payeeName: 'Large Amount',
         amount: 999_999_999,
         cpaCode: cpaCodePropertyTaxes
       });
-
-      try {
+      assert.throws(() => {
         eftGenerator.generate();
-        assert.fail();
-      } catch {
-        assert.ok(true);
-      }
+      });
     });
 
-    await it('Warns when the payeeName is too long.', () => {
+    await it('throws when payeeName exceeds 30 characters', () => {
       const eftGenerator = new EFTFileBuilder(config);
-
       eftGenerator.addCreditTransaction({
         ...validBank,
         payeeName: 'This payee name is too long and will be truncated to fit.',
         amount: 100,
         cpaCode: cpaCodePropertyTaxes
       });
-
-      assert.ok(
-        new EFTFileValidator(eftGenerator)
-          .validate()
-          .some((validationWarning) => validationWarning.warningField === 'payeeName')
-      );
+      assert.throws(() => {
+        eftGenerator.generate();
+      }, /payeeName exceeds/);
     });
 
-    await it('Warns when the crossReferenceNumber is duplicated.', () => {
+    await it('throws on duplicate crossReferenceNumber within the same file', () => {
       const eftGenerator = new EFTFileBuilder(config);
-
       eftGenerator.addDebitTransaction({
         ...validBank,
-        payeeName: 'Same cross reference',
+        payeeName: 'first',
         crossReferenceNumber: 'abc',
         amount: 100,
         cpaCode: cpaCodePropertyTaxes
       });
-
       eftGenerator.addDebitTransaction({
         ...validBank,
-        payeeName: 'Same cross reference',
+        payeeName: 'second',
         crossReferenceNumber: 'abc',
         amount: 100,
         cpaCode: cpaCodePropertyTaxes
       });
+      assert.throws(() => {
+        eftGenerator.generate();
+      }, /crossReferenceNumber must be unique/);
+    });
 
-      assert.ok(
-        new EFTFileValidator(eftGenerator)
-          .validate()
-          .some(
-            (validationWarning) =>
-              validationWarning.warningField === 'crossReferenceNumber'
-          )
-      );
+    await it('throws when paymentDate is more than 173 days from fileCreationDate', () => {
+      const eftGenerator = new EFTFileBuilder({
+        ...config,
+        fileCreationDate: new Date(2025, 0, 1)
+      });
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        payeeName: 'too far',
+        amount: 100,
+        cpaCode: cpaCodePropertyTaxes,
+        paymentDate: new Date(2025, 11, 1) // ~334 days later
+      });
+      assert.throws(() => {
+        eftGenerator.generate();
+      }, /paymentDate is more than 173 days/);
     });
   });
 
   await describe('Spec compliance', async () => {
     await it('Uses CR-only as line delimiter, not CRLF (spec page 58)', () => {
       const eftGenerator = new EFTFileBuilder(config);
-
       eftGenerator.addDebitTransaction({
         ...validBank,
         cpaCode: cpaCodePropertyTaxes,
@@ -398,12 +359,12 @@ await describe('eft-generator - CPA-005', async () => {
     });
 
     await it('Output contains only spec-allowed characters (spec page 59)', () => {
+      // Names that contain prohibited characters; these will throw at validation.
       const eftGenerator = new EFTFileBuilder({
         ...config,
-        originatorShortName: 'TH(855)515-9999',
-        originatorLongName: 'Total Game Plan 1(855)515-9999'
+        originatorShortName: 'TEST GAME PLAN',
+        originatorLongName: 'TOTAL GAME PLAN INC'
       });
-
       eftGenerator.addDebitTransaction({
         ...validBank,
         cpaCode: cpaCodePropertyTaxes,
@@ -417,37 +378,25 @@ await describe('eft-generator - CPA-005', async () => {
       assert.match(output, /^[0-9A-Z =_$.&*,\r]*$/);
     });
 
-    await it('Warns when originatorShortName contains prohibited characters', () => {
+    await it('throws when originatorShortName contains prohibited characters', () => {
       const eftGenerator = new EFTFileBuilder({
         ...config,
         originatorShortName: 'TH(855)515-9999'
       });
-
-      assert.ok(
-        new EFTFileValidator(eftGenerator)
-          .validate()
-          .some(
-            (validationWarning) =>
-              validationWarning.warningField === 'originatorShortName' &&
-              validationWarning.warning.toLowerCase().includes('prohibited')
-          )
+      assert.throws(
+        () => new EFTFileValidator(eftGenerator).validate(),
+        /originatorShortName contains prohibited characters/
       );
     });
 
-    await it('Warns when originatorLongName contains prohibited characters', () => {
+    await it('throws when originatorLongName contains prohibited characters', () => {
       const eftGenerator = new EFTFileBuilder({
         ...config,
         originatorLongName: 'Total Game Plan 1(855)515-9999'
       });
-
-      assert.ok(
-        new EFTFileValidator(eftGenerator)
-          .validate()
-          .some(
-            (validationWarning) =>
-              validationWarning.warningField === 'originatorLongName' &&
-              validationWarning.warning.toLowerCase().includes('prohibited')
-          )
+      assert.throws(
+        () => new EFTFileValidator(eftGenerator).validate(),
+        /originatorLongName contains prohibited characters/
       );
     });
   });
@@ -516,6 +465,13 @@ await describe('eft-generator - CPA-005', async () => {
         ...config,
         fileCreationDate: new Date(2022, 0, 1)
       });
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        cpaCode: cpaCodePropertyTaxes,
+        amount: 100,
+        payeeName: 'TEST PAYEE',
+        paymentDate: new Date(2022, 0, 1)
+      });
       assert.strictEqual(headerCreationDate(eftGenerator), '022001');
     });
 
@@ -523,6 +479,13 @@ await describe('eft-generator - CPA-005', async () => {
       const eftGenerator = new EFTFileBuilder({
         ...config,
         fileCreationDate: new Date(2022, 11, 31)
+      });
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        cpaCode: cpaCodePropertyTaxes,
+        amount: 100,
+        payeeName: 'TEST PAYEE',
+        paymentDate: new Date(2022, 11, 31)
       });
       assert.strictEqual(headerCreationDate(eftGenerator), '022365');
     });
@@ -532,6 +495,13 @@ await describe('eft-generator - CPA-005', async () => {
         ...config,
         fileCreationDate: new Date(2020, 11, 31)
       });
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        cpaCode: cpaCodePropertyTaxes,
+        amount: 100,
+        payeeName: 'TEST PAYEE',
+        paymentDate: new Date(2020, 11, 31)
+      });
       assert.strictEqual(headerCreationDate(eftGenerator), '020366');
     });
 
@@ -539,6 +509,13 @@ await describe('eft-generator - CPA-005', async () => {
       const eftGenerator = new EFTFileBuilder({
         ...config,
         fileCreationDate: new Date(2005, 0, 5)
+      });
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        cpaCode: cpaCodePropertyTaxes,
+        amount: 100,
+        payeeName: 'TEST PAYEE',
+        paymentDate: new Date(2005, 0, 5)
       });
       assert.strictEqual(headerCreationDate(eftGenerator), '005005');
     });

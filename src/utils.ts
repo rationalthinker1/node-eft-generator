@@ -2,15 +2,22 @@ export const NEWLINE = '\r';
 
 const MILLISECONDS_PER_DAY = 86_400_000;
 
-const PROHIBITED_CHARACTERS = /[^A-Z0-9 =_$.&*,]/;
-const PROHIBITED_CHARACTERS_GLOBAL = new RegExp(PROHIBITED_CHARACTERS.source, 'g');
+// Input characters allowed before uppercasing. Lowercase ASCII letters are
+// permitted because sanitizeCPA005Text() will uppercase them; they are not
+// truly prohibited. Characters outside this set must be rejected by the
+// validator before generation.
+const PROHIBITED_INPUT_CHARACTERS = /[^A-Za-z0-9 =_$.&*,]/;
+
+// Characters allowed in the on-the-wire (post-uppercase) record. Anything
+// outside this set is replaced with a space by sanitizeCPA005Text().
+const PROHIBITED_OUTPUT_CHARACTERS_GLOBAL = /[^A-Z0-9 =_$.&*,]/g;
 
 export function containsProhibitedCharacters(input: string): boolean {
-  return PROHIBITED_CHARACTERS.test(input);
+  return PROHIBITED_INPUT_CHARACTERS.test(input);
 }
 
 export function sanitizeCPA005Text(input: string): string {
-  return input.toUpperCase().replaceAll(PROHIBITED_CHARACTERS_GLOBAL, ' ');
+  return input.toUpperCase().replaceAll(PROHIBITED_OUTPUT_CHARACTERS_GLOBAL, ' ');
 }
 
 /**
