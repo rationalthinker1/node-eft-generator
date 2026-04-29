@@ -1,36 +1,38 @@
 # EFT Generator for Node
 
-[![NPM Version](https://img.shields.io/npm/v/%40cityssm%2Feft-generator)](https://www.npmjs.com/package/@cityssm/eft-generator)
-[![DeepSource](https://app.deepsource.com/gh/cityssm/node-eft-generator.svg/?label=active+issues&show_trend=true&token=cznyFIk-aMahhJdonnA8yjqZ)](https://app.deepsource.com/gh/cityssm/node-eft-generator/?ref=repository-badge)
-[![codecov](https://codecov.io/gh/cityssm/node-eft-generator/graph/badge.svg?token=JLS2JHUC4O)](https://codecov.io/gh/cityssm/node-eft-generator)
+[![NPM Version](https://img.shields.io/npm/v/%40rationalthinker1%2Feft-generator)](https://www.npmjs.com/package/@rationalthinker1/eft-generator)
+
+> Forked from [cityssm/node-eft-generator](https://github.com/cityssm/node-eft-generator).
 
 Formats Electronic Funds Transfer (EFT) data into the CPA 005 standard.
 
 Supports credit (C) and debit (D) record types.
 Other logical record types are not supported.
 
-✔️ Output parsed successfully by Scotiabank.
+✔️ Output parsed successfully by BMO.
 
 ## Installation
 
 ```sh
-npm install @cityssm/eft-generator
+npm install @rationalthinker1/eft-generator
+# or
+yarn add @rationalthinker1/eft-generator
 ```
 
 ## Usage
 
 ```javascript
 import fs from 'node:fs'
-import { EFTGenerator } from '@cityssm/eft-generator'
+import { EFTFileBuilder } from '@rationalthinker1/eft-generator'
 
-const eftGenerator = new EFTGenerator({
+const eftFile = new EFTFileBuilder({
   originatorId: '0123456789',
   originatorShortName: 'SSM',
   originatorLongName: 'The City of Sault Ste. Marie',
   fileCreationNumber: '0001'
 })
 
-eftGenerator.addDebitTransaction({
+eftFile.addDebitTransaction({
   bankInstitutionNumber: '111',
   bankTransitNumber: '22222',
   bankAccountNumber: '333333333',
@@ -39,10 +41,31 @@ eftGenerator.addDebitTransaction({
   payeeName: 'Test Property Owner'
 })
 
-const output = eftGenerator.toCPA005()
+const output = eftFile.generate()
 
 fs.writeFileSync('cpa005.txt', output)
 ```
+
+## Migrating from 1.x to 2.x
+
+The top-level class was renamed from `EFTGenerator` to `EFTFileBuilder` to make
+room for an internal `EFTGenerator` class that owns CPA-005 formatting. Two
+methods on the public class were also renamed for clarity:
+
+```diff
+- import { EFTGenerator } from '@rationalthinker1/eft-generator'
+- const eft = new EFTGenerator(config)
++ import { EFTFileBuilder } from '@rationalthinker1/eft-generator'
++ const eft = new EFTFileBuilder(config)
+
+- eft.toCPA005()
+- eft.validateCPA005()
++ eft.generate()
++ eft.validate()
+```
+
+`addTransaction`, `addCreditTransaction`, `addDebitTransaction`,
+`getConfiguration`, and `getTransactions` are unchanged.
 
 ## Resources
 

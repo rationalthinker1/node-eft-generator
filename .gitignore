@@ -1,4 +1,27 @@
 .nyc_output/
+build/
 coverage/
 node_modules/
-test/output/*.txt
+src/**/*.js
+src/**/*.d.ts
+tests/**/*.js
+tests/**/*.d.ts
+tests/output/*.txt
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# env files
+.env
+.env.local
+.env.*.local
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# TS incremental build cache
+*.tsbuildinfo

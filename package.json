@@ -1,6 +1,6 @@
 {
-  "name": "@cityssm/eft-generator",
-  "version": "1.0.1",
+  "name": "@rationalthinker1/eft-generator",
+  "version": "2.0.0",
   "description": "Formats Electronic Funds Transfer (EFT) data into the CPA 005 standard.",
   "keywords": [
     "banking",
@@ -8,37 +8,61 @@
     "electronic-funds-transfer",
     "cpa-005"
   ],
-  "homepage": "https://github.com/cityssm/node-eft-generator#readme",
+  "homepage": "https://github.com/rationalthinker1/node-eft-generator#readme",
   "bugs": {
-    "url": "https://github.com/cityssm/node-eft-generator/issues"
+    "url": "https://github.com/rationalthinker1/node-eft-generator/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cityssm/node-eft-generator.git"
+    "url": "git+https://github.com/rationalthinker1/node-eft-generator.git"
   },
   "license": "MIT",
-  "author": "The Corporation of the City of Sault Ste. Marie",
+  "author": "rationalthinker1",
+  "contributors": [
+    "The Corporation of the City of Sault Ste. Marie (original author)"
+  ],
   "type": "module",
+  "types": "./build/index.d.ts",
   "exports": {
-    ".": "./index.js",
-    "./debug": "./debug.config.js"
+    ".": "./build/index.js"
   },
+  "imports": {
+    "#*": {
+      "development": {
+        "types": "./src/*.ts",
+        "default": "./build/*.js"
+      },
+      "types": "./build/*.d.ts",
+      "default": "./build/*.js"
+    }
+  },
+  "files": [
+    "build/index.*",
+    "build/types.*",
+    "build/EFTFileBuilder.*",
+    "build/EFTFileValidator.*",
+    "build/EFTGenerator.*",
+    "build/utils.*",
+    "build/cpaCodes/"
+  ],
   "scripts": {
-    "coverage": "c8 --reporter=lcov --reporter=text --reporter=text-summary node --test",
-    "test": "node --test"
+    "build": "tsc",
+    "build:tests": "tsc -p tsconfig.test.json",
+    "prepublishOnly": "yarn build",
+    "coverage": "yarn build && yarn build:tests && c8 --reporter=lcov --reporter=text --reporter=text-summary node --test \"build/tests/**/*.js\"",
+    "test": "yarn build && yarn build:tests && node --test \"build/tests/**/*.js\""
   },
-  "dependencies": {
-    "@cityssm/cpa-codes": "^1.0.0",
-    "@cityssm/modern-julian-date": "^1.0.2",
-    "debug": "^4.4.1"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/debug": "^4.1.12",
+    "@eslint/js": "^10.0.1",
+    "@stylistic/eslint-plugin": "^5.10.0",
     "@types/node": "^24.0.13",
-    "eslint-config-cityssm": "^26.0.0",
-    "prettier-config-cityssm": "^1.0.0"
+    "eslint": "^10.2.1",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.1"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=24.0.0"
   }
 }

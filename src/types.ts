@@ -45,12 +45,27 @@ export interface EFTConfiguration {
   returnAccountNumber?: string
 }
 
+export const TRANSACTION_TYPE = {
+  CREDIT: 'C',
+  DEBIT: 'D'
+} as const;
+
+export type TransactionType = typeof TRANSACTION_TYPE[keyof typeof TRANSACTION_TYPE]; // 'C' | 'D'
+
+export const RECORD_TYPE = {
+  HEADER: 'A',
+  TRANSACTION_CREDIT: 'C',
+  TRANSACTION_DEBIT: 'D',
+  TRAILER: 'Z'
+} as const;
+export type RecordType = typeof RECORD_TYPE[keyof typeof RECORD_TYPE]; // 'A' | 'C' | 'D' | 'Z'
+
 export interface EFTTransaction {
   /**
    * C = Credit - sending funds
    * D = Debit  - receiving funds
    */
-  recordType: 'C' | 'D'
+  recordType: TransactionType
 
   segments: EFTTransactionSegment[]
 }
@@ -71,17 +86,17 @@ export interface EFTTransactionSegment {
   /**
    * Three digits
    */
-  bankInstitutionNumber: string
+  bankInstitutionNumber: `${number}`
 
   /**
    * Five digits
    */
-  bankTransitNumber: string
+  bankTransitNumber: `${number}`
 
   /**
-   * Up to 12 digits
+   * 5-12 digits
    */
-  bankAccountNumber: string
+  bankAccountNumber: `${number}`
 
   payeeName: string
 
@@ -91,16 +106,24 @@ export interface EFTTransactionSegment {
 export type ValidationWarning = {
   warning: string
 } & (
-  | {
+    | {
       warningField: keyof EFTConfiguration | 'transactions'
     }
-  | {
+    | {
       transactionIndex: number
       warningField: keyof EFTTransaction
     }
-  | {
+    | {
       transactionIndex: number
       transactionSegmentIndex: number
       warningField: keyof EFTTransactionSegment
     }
-)
+  );
+
+export type CPACodeString = number;
+
+export interface CPACode {
+  cpaCodeFullName: string;
+  cpaCodeAbbreviationEnglish: string;
+  cpaCodeAbbreviationFrench: string;
+}
