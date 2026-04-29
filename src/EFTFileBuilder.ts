@@ -56,15 +56,10 @@ export class EFTFileBuilder {
   }
 
   /**
-   * Checks if the current configuration and transactions can be processed into the CPA-005 format.
-   * @returns `true` if there will be no fatal errors.
+   * Validates the configuration and transactions against the CPA-005 spec.
+   * Re-throws any error the validator surfaces.
    */
-  validate(): boolean {
-    try {
-      this.#validator.validate();
-      return true;
-    } catch {
-      return false;
-    }
+  validate(): void {
+    this.#validator.validate();
   }
 }

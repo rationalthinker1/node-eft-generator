@@ -4,7 +4,7 @@ import { cpaTransactionCodesPreauthorized } from '#cpaCodes/transactions/preauth
 import { cpaTransactionCodesProvincialLocal } from '#cpaCodes/transactions/provincialLocal';
 import type { CPACode, CPACodeNumber } from '#types';
 
-export const cpaTransactionCodes = {
+const cpaTransactionCodes = {
   ...cpaTransactionCodesPreauthorized,
   ...cpaTransactionCodesFederal,
   ...cpaTransactionCodesProvincialLocal,
@@ -15,6 +15,12 @@ type CPATransactionCodeKey = keyof typeof cpaTransactionCodes;
 /** Stringified literal union of every recognised CPA transaction code. */
 export type CPATransactionCode = `${CPATransactionCodeKey}`;
 
-export function isCPATransactionCode(cpaCode: string): cpaCode is CPATransactionCode {
-  return Object.hasOwn(cpaTransactionCodes, cpaCode);
+export class CPATransactionCodes {
+  /** All recognised CPA-005 transaction codes keyed by their numeric value. */
+  static readonly all = cpaTransactionCodes;
+
+  /** Type guard for whether a string is a recognised CPA transaction code. */
+  static is(cpaCode: string): cpaCode is CPATransactionCode {
+    return Object.hasOwn(cpaTransactionCodes, cpaCode);
+  }
 }

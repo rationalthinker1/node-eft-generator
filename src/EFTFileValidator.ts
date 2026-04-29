@@ -1,12 +1,20 @@
+import { EFTFileSpec } from '#EFTFileSpec';
 import type { EFTFileBuilder } from '#EFTFileBuilder';
-import {
-  TRANSACTION_TYPE,
-  type EFTConfiguration,
-  type EFTTransaction,
-  type ValidationWarning
-} from '#types';
+import { TRANSACTION_TYPE, type EFTConfiguration, type EFTTransaction } from '#types';
 import { containsProhibitedCharacters } from '#utils';
 
+const MS_PER_DAY = 86_400_000;
+const MAX_PAYMENT_DATE_OFFSET_DAYS = 173;
+const MAX_PAYMENT_DATE_OFFSET_MS = MAX_PAYMENT_DATE_OFFSET_DAYS * MS_PER_DAY;
+
+/**
+ * Validates an `EFTFileBuilder` against the CPA-005 specification.
+ *
+ * Throws on every spec violation. There are no warnings — callers must
+ * supply input that already conforms to the spec. The validator is run
+ * automatically by `EFTFileGenerator.generate()`, so any throw aborts
+ * file generation before any record is emitted.
+ */
 export class EFTFileValidator {
   readonly #builder: EFTFileBuilder;
 
@@ -14,18 +22,16 @@ export class EFTFileValidator {
     this.#builder = builder;
   }
 
-  validate(): ValidationWarning[] {
-    return [
-      ...this.validateConfig(this.#builder.getConfiguration()),
-      ...this.validateTransactions(this.#builder.getTransactions())
-    ];
+  validate(): void {
+    this.validateConfig(this.#builder.getConfiguration());
+    this.validateTransactions(this.#builder.getTransactions());
   }
 
-  validateConfig(eftConfig: EFTConfiguration): ValidationWarning[] {
-    const validationWarnings: ValidationWarning[] = [];
-
-    if (eftConfig.originatorId.length > 10) {
-      throw new Error(`originatorId length exceeds 10: ${eftConfig.originatorId}`);
+  validateConfig(eftConfig: EFTConfiguration): void {
+    if (eftConfig.originatorId.length > EFTFileSpec.FIELD_WIDTHS.originatorId) {
+      throw new Error(
+        `originatorId length exceeds ${String(EFTFileSpec.FIELD_WIDTHS.originatorId)}: ${eftConfig.originatorId}`
+      );
     }
 
     if (!/^\d{1,4}$/.test(eftConfig.fileCreationNumber)) {
@@ -41,40 +47,35 @@ export class EFTFileValidator {
     }
 
     if (eftConfig.originatorShortName === undefined) {
-      validationWarnings.push({
-        warningField: 'originatorShortName',
-        warning: 'originatorShortName not defined, using originatorLongName.'
-      });
-
-      eftConfig.originatorShortName = eftConfig.originatorLongName;
+      throw new Error('originatorShortName is required.');
     }
 
-    if (eftConfig.originatorShortName.length > 15) {
-      validationWarnings.push({
-        warning: `originatorShortName will be truncated to 15 characters: ${eftConfig.originatorShortName}`,
-        warningField: 'originatorShortName'
-      });
+    if (
+      eftConfig.originatorShortName.length > EFTFileSpec.FIELD_WIDTHS.originatorShortName
+    ) {
+      throw new Error(
+        `originatorShortName exceeds ${String(EFTFileSpec.FIELD_WIDTHS.originatorShortName)} characters: ${eftConfig.originatorShortName}`
+      );
     }
 
     if (containsProhibitedCharacters(eftConfig.originatorShortName)) {
-      validationWarnings.push({
-        warning: `originatorShortName contains prohibited characters and will be sanitized: ${eftConfig.originatorShortName}`,
-        warningField: 'originatorShortName'
-      });
+      throw new Error(
+        `originatorShortName contains prohibited characters: ${eftConfig.originatorShortName}`
+      );
     }
 
-    if (eftConfig.originatorLongName.length > 30) {
-      validationWarnings.push({
-        warning: `originatorLongName will be truncated to 30 characters: ${eftConfig.originatorLongName}`,
-        warningField: 'originatorLongName'
-      });
+    if (
+      eftConfig.originatorLongName.length > EFTFileSpec.FIELD_WIDTHS.originatorLongName
+    ) {
+      throw new Error(
+        `originatorLongName exceeds ${String(EFTFileSpec.FIELD_WIDTHS.originatorLongName)} characters: ${eftConfig.originatorLongName}`
+      );
     }
 
     if (containsProhibitedCharacters(eftConfig.originatorLongName)) {
-      validationWarnings.push({
-        warning: `originatorLongName contains prohibited characters and will be sanitized: ${eftConfig.originatorLongName}`,
-        warningField: 'originatorLongName'
-      });
+      throw new Error(
+        `originatorLongName contains prohibited characters: ${eftConfig.originatorLongName}`
+      );
     }
 
     if (!['', 'CAD', 'USD'].includes(eftConfig.destinationCurrency ?? '')) {
@@ -98,87 +99,90 @@ export class EFTFileValidator {
         'returnInstitutionNumber, returnTransitNumber, and returnAccountNumber must be defined together, or not defined at all.'
       );
     }
-
-    return validationWarnings;
   }
 
-  validateTransactions(eftTransactions: EFTTransaction[]): ValidationWarning[] {
-    const validationWarnings: ValidationWarning[] = [];
-
+  validateTransactions(eftTransactions: EFTTransaction[]): void {
     if (eftTransactions.length === 0) {
-      validationWarnings.push({
-        warning: 'There are no transactions to include in the file.',
-        warningField: 'transactions'
-      });
-    } else if (eftTransactions.length > 999_999_999) {
-      throw new Error('Transaction count exceeds 999,999,999.');
+      throw new Error('There are no transactions in this file.');
     }
+    if (eftTransactions.length > EFTFileSpec.MAX_FILE_TRANSACTION_COUNT) {
+      throw new Error(
+        `Transaction count exceeds ${String(EFTFileSpec.MAX_FILE_TRANSACTION_COUNT)}.`
+      );
+    }
+
+    const fileCreationDate =
+      this.#builder.getConfiguration().fileCreationDate ?? new Date();
 
     const crossReferenceNumbers = new Set<string>();
 
     for (const [transactionIndex, transaction] of eftTransactions.entries()) {
       if (transaction.segments.length === 0) {
-        validationWarnings.push({
-          transactionIndex,
-          warning: 'Transaction record has no segments, will be ignored.',
-          warningField: 'segments'
-        });
-      } else if (transaction.segments.length > 6) {
-        validationWarnings.push({
-          transactionIndex,
-          warning:
-            'Transaction record has more than 6 segments, will be split into multiple transactions.',
-          warningField: 'segments'
-        });
+        throw new Error(`Transaction ${String(transactionIndex)} has no segments.`);
+      }
+      if (transaction.segments.length > EFTFileSpec.MAX_SEGMENTS_PER_RECORD) {
+        throw new Error(
+          `Transaction ${String(transactionIndex)} has more than ${String(EFTFileSpec.MAX_SEGMENTS_PER_RECORD)} segments; split into multiple transactions.`
+        );
       }
 
       if (!Object.values(TRANSACTION_TYPE).includes(transaction.recordType)) {
         throw new Error(`Unsupported recordType: ${transaction.recordType}`);
       }
 
-      for (const [transactionSegmentIndex, segment] of transaction.segments.entries()) {
-        // cpaCode is typed as CPATransactionCode (the literal union of known
-        // codes), so unknown codes are rejected at compile time.
-
+      for (const [segmentIndex, segment] of transaction.segments.entries()) {
         if (segment.amount <= 0) {
           throw new Error(
-            `Segment amount cannot be less than or equal to zero: ${String(segment.amount)}`
+            `Segment ${String(segmentIndex)} amount must be positive: ${String(segment.amount)}`
           );
         }
-
-        if (segment.amount >= 100_000_000) {
+        if (segment.amount >= EFTFileSpec.MAX_TRANSACTION_AMOUNT) {
           throw new Error(
-            `Segment amount cannot exceed $100,000,000: ${String(segment.amount)}`
+            `Segment ${String(segmentIndex)} amount exceeds ${String(EFTFileSpec.MAX_TRANSACTION_AMOUNT)}: ${String(segment.amount)}`
           );
         }
 
-        // bankInstitutionNumber, bankTransitNumber and bankAccountNumber are
-        // already validated at construction time by their branded constructors
-        // (bankInstitution / bankTransit / bankAccount).
-
-        if (segment.payeeName.length > 30) {
-          validationWarnings.push({
-            transactionIndex,
-            transactionSegmentIndex,
-            warning: `payeeName will be truncated to 30 characters: ${segment.payeeName}`,
-            warningField: 'payeeName'
-          });
+        if (segment.payeeName.length > EFTFileSpec.FIELD_WIDTHS.payeeName) {
+          throw new Error(
+            `payeeName exceeds ${String(EFTFileSpec.FIELD_WIDTHS.payeeName)} characters: ${segment.payeeName}`
+          );
+        }
+        if (containsProhibitedCharacters(segment.payeeName)) {
+          throw new Error(
+            `payeeName contains prohibited characters: ${segment.payeeName}`
+          );
         }
 
         if (segment.crossReferenceNumber !== undefined) {
+          if (
+            segment.crossReferenceNumber.length > EFTFileSpec.FIELD_WIDTHS.crossReference
+          ) {
+            throw new Error(
+              `crossReferenceNumber exceeds ${String(EFTFileSpec.FIELD_WIDTHS.crossReference)} characters: ${segment.crossReferenceNumber}`
+            );
+          }
+          if (containsProhibitedCharacters(segment.crossReferenceNumber)) {
+            throw new Error(
+              `crossReferenceNumber contains prohibited characters: ${segment.crossReferenceNumber}`
+            );
+          }
           if (crossReferenceNumbers.has(segment.crossReferenceNumber)) {
-            validationWarnings.push({
-              transactionIndex,
-              transactionSegmentIndex,
-              warning: `crossReferenceNumber should be unique: ${segment.crossReferenceNumber}`,
-              warningField: 'crossReferenceNumber'
-            });
+            throw new Error(
+              `crossReferenceNumber must be unique within a file: ${segment.crossReferenceNumber}`
+            );
           }
           crossReferenceNumbers.add(segment.crossReferenceNumber);
         }
+
+        if (segment.paymentDate !== undefined) {
+          const offsetMs = segment.paymentDate.getTime() - fileCreationDate.getTime();
+          if (Math.abs(offsetMs) > MAX_PAYMENT_DATE_OFFSET_MS) {
+            throw new Error(
+              `Segment ${String(segmentIndex)} paymentDate is more than ${String(MAX_PAYMENT_DATE_OFFSET_DAYS)} days from fileCreationDate: ${segment.paymentDate.toISOString()}`
+            );
+          }
+        }
       }
     }
-
-    return validationWarnings;
   }
 }

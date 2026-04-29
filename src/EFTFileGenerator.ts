@@ -1,4 +1,4 @@
-import { FIELD_WIDTHS, RECORD_LENGTH, assertRecordLength, fixedField } from '#cpa005Spec';
+import { EFTFileSpec } from '#EFTFileSpec';
 import type { EFTFileBuilder } from '#EFTFileBuilder';
 import { EFTFileValidator } from '#EFTFileValidator';
 import { RECORD_TYPE, TRANSACTION_TYPE, type EFTTransaction } from '#types';
@@ -25,18 +25,13 @@ export class EFTFileGenerator {
   generate(): string {
     this.#resetCounters();
 
-    const validationWarnings = this.#validator.validate();
-    if (validationWarnings.length > 0) {
-      console.debug(
-        `Proceeding with ${String(validationWarnings.length)} warnings.`,
-        validationWarnings
-      );
-    }
+    // Throws on any spec violation; aborts before any record is emitted.
+    this.#validator.validate();
 
     const lines: string[] = [this.generateHeader()];
 
     for (const transaction of this.#builder.getTransactions()) {
-      lines.push(...this.generateTransaction(transaction));
+      lines.push(this.generateTransaction(transaction));
     }
 
     lines.push(this.generateTrailer());
@@ -46,6 +41,7 @@ export class EFTFileGenerator {
 
   generateHeader(): string {
     const eftConfig = this.#builder.getConfiguration();
+    const widths = EFTFileSpec.FIELD_WIDTHS;
 
     const fileCreationJulianDate = toPaddedJulianDate(
       eftConfig.fileCreationDate ?? new Date()
@@ -53,29 +49,33 @@ export class EFTFileGenerator {
 
     const dataCentre =
       eftConfig.destinationDataCentre === undefined
-        ? fixedField('', FIELD_WIDTHS.dataCentre, LEFT_SPACE)
-        : fixedField(
+        ? EFTFileSpec.fixedField('', widths.dataCentre, LEFT_SPACE)
+        : EFTFileSpec.fixedField(
             eftConfig.destinationDataCentre,
-            FIELD_WIDTHS.dataCentre,
+            widths.dataCentre,
             RIGHT_ZERO
           );
 
     const destinationCurrency =
       eftConfig.destinationCurrency === undefined
-        ? fixedField('', FIELD_WIDTHS.currency, LEFT_SPACE)
-        : fixedField(eftConfig.destinationCurrency, FIELD_WIDTHS.currency, LEFT_SPACE);
+        ? EFTFileSpec.fixedField('', widths.currency, LEFT_SPACE)
+        : EFTFileSpec.fixedField(
+            eftConfig.destinationCurrency,
+            widths.currency,
+            LEFT_SPACE
+          );
 
     const record =
       // Logical Record Type Id
       RECORD_TYPE.HEADER +
       // Logical Record Count
-      fixedField('1', FIELD_WIDTHS.logicalRecordCount, RIGHT_ZERO) +
+      EFTFileSpec.fixedField('1', widths.logicalRecordCount, RIGHT_ZERO) +
       // Originator's Id / Client Number
-      fixedField(eftConfig.originatorId, FIELD_WIDTHS.originatorId, LEFT_SPACE) +
+      EFTFileSpec.fixedField(eftConfig.originatorId, widths.originatorId, LEFT_SPACE) +
       // File Creation Number
-      fixedField(
+      EFTFileSpec.fixedField(
         eftConfig.fileCreationNumber,
-        FIELD_WIDTHS.fileCreationNumber,
+        widths.fileCreationNumber,
         RIGHT_ZERO
       ) +
       // Creation Date (0YYDDD)
@@ -83,71 +83,63 @@ export class EFTFileGenerator {
       // Destination Data Centre
       dataCentre +
       // Reserved Customer Direct Clearer Communication Area
-      fixedField('', FIELD_WIDTHS.reservedHeader, LEFT_SPACE) +
+      EFTFileSpec.fixedField('', widths.reservedHeader, LEFT_SPACE) +
       // Currency Code Identifier
       destinationCurrency +
       // Filler
-      fixedField('', FIELD_WIDTHS.headerFiller, LEFT_SPACE);
+      EFTFileSpec.fixedField('', widths.headerFiller, LEFT_SPACE);
 
-    return assertRecordLength(record, 'header');
+    return EFTFileSpec.assertRecordLength(record, 'header');
   }
 
   /**
-   * Builds the logical record line(s) for a single transaction. A transaction
-   * with more than 6 segments is split across multiple records.
-   * Updates running counters used by {@link generateTrailer}.
+   * Builds the logical record line for a single transaction. The validator
+   * has already confirmed segments.length is between 1 and
+   * MAX_SEGMENTS_PER_RECORD, so a single record always fits.
    */
-  generateTransaction(transaction: EFTTransaction): string[] {
+  generateTransaction(transaction: EFTTransaction): string {
     const eftConfig = this.#builder.getConfiguration();
-    const lines: string[] = [];
-    let record = '';
+    const widths = EFTFileSpec.FIELD_WIDTHS;
+
+    this.#recordCount += 1;
+
+    if (transaction.recordType === TRANSACTION_TYPE.CREDIT) {
+      this.#totalNumberCredits += 1;
+    } else {
+      this.#totalNumberDebits += 1;
+    }
+
+    let record =
+      // Logical Record Type Id
+      transaction.recordType +
+      // Logical Record Count
+      EFTFileSpec.fixedField(
+        this.#recordCount.toString(),
+        widths.logicalRecordCount,
+        RIGHT_ZERO
+      ) +
+      // Origination Control Data
+      EFTFileSpec.fixedField(eftConfig.originatorId, widths.originatorId, LEFT_SPACE) +
+      EFTFileSpec.fixedField(
+        eftConfig.fileCreationNumber,
+        widths.fileCreationNumber,
+        RIGHT_ZERO
+      );
+
+    // originatorShortName is required by the validator.
+    const originatorShortName = eftConfig.originatorShortName ?? '';
 
     for (const [segmentIndex, segment] of transaction.segments.entries()) {
-      if (segmentIndex % 6 === 0) {
-        if (segmentIndex > 0) {
-          lines.push(assertRecordLength(record, 'transaction'));
-        }
-
-        this.#recordCount += 1;
-
-        if (transaction.recordType === TRANSACTION_TYPE.CREDIT) {
-          this.#totalNumberCredits += 1;
-        } else {
-          this.#totalNumberDebits += 1;
-        }
-
-        record =
-          // Logical Record Type Id
-          transaction.recordType +
-          // Logical Record Count
-          fixedField(
-            this.#recordCount.toString(),
-            FIELD_WIDTHS.logicalRecordCount,
-            RIGHT_ZERO
-          ) +
-          // Origination Control Data
-          fixedField(eftConfig.originatorId, FIELD_WIDTHS.originatorId, LEFT_SPACE) +
-          fixedField(
-            eftConfig.fileCreationNumber,
-            FIELD_WIDTHS.fileCreationNumber,
-            RIGHT_ZERO
-          );
-      }
-
       const paymentJulianDate = toPaddedJulianDate(segment.paymentDate ?? new Date());
 
-      let crossReferenceNumber = segment.crossReferenceNumber;
-
-      crossReferenceNumber ??=
+      const crossReferenceNumber =
+        segment.crossReferenceNumber ??
         'F' +
-        eftConfig.fileCreationNumber +
-        'R' +
-        this.#recordCount.toString() +
-        'S' +
-        (segmentIndex + 1).toString();
-
-      const originatorShortName =
-        eftConfig.originatorShortName ?? eftConfig.originatorLongName;
+          eftConfig.fileCreationNumber +
+          'R' +
+          this.#recordCount.toString() +
+          'S' +
+          (segmentIndex + 1).toString();
 
       // Positions 215-264 differ by record type. C: 39 blanks + 11 zeros.
       // D (page 64): zero-fill at 215-247 (MICR area defaults to zeros), 6 blanks at
@@ -159,70 +151,83 @@ export class EFTFileGenerator {
 
       record +=
         // Transaction Type
-        fixedField(segment.cpaCode, FIELD_WIDTHS.cpaCode, RIGHT_ZERO) +
+        EFTFileSpec.fixedField(segment.cpaCode, widths.cpaCode, RIGHT_ZERO) +
         // Amount
-        fixedField(
+        EFTFileSpec.fixedField(
           Math.round(segment.amount * 100).toString(),
-          FIELD_WIDTHS.amount,
+          widths.amount,
           RIGHT_ZERO
         ) +
-        // Credit: Date Funds to be Available
-        // Debit: Due Date
+        // Credit: Date Funds to be Available / Debit: Due Date
         paymentJulianDate +
-        // Institutional Identification Number (9 digits)
-        fixedField('', FIELD_WIDTHS.institutionalIdLead, RIGHT_ZERO) +
-        fixedField(
+        // Institutional Identification Number (9 digits = 1 lead + 3 inst + 5 transit)
+        EFTFileSpec.fixedField('', widths.institutionalIdLead, RIGHT_ZERO) +
+        EFTFileSpec.fixedField(
           segment.bankInstitutionNumber,
-          FIELD_WIDTHS.institutionNumber,
+          widths.institutionNumber,
           RIGHT_ZERO
         ) +
-        fixedField(segment.bankTransitNumber, FIELD_WIDTHS.transitNumber, RIGHT_ZERO) +
-        // Credit: Payee Account Number
-        // Debit: Payor Account Number
-        fixedField(segment.bankAccountNumber, FIELD_WIDTHS.accountNumber, LEFT_SPACE) +
+        EFTFileSpec.fixedField(
+          segment.bankTransitNumber,
+          widths.transitNumber,
+          RIGHT_ZERO
+        ) +
+        // Credit: Payee Account Number / Debit: Payor Account Number
+        EFTFileSpec.fixedField(
+          segment.bankAccountNumber,
+          widths.accountNumber,
+          LEFT_SPACE
+        ) +
         // Filler (zeros)
-        fixedField('', FIELD_WIDTHS.segmentFillerZeros, RIGHT_ZERO) +
+        EFTFileSpec.fixedField('', widths.segmentFillerZeros, RIGHT_ZERO) +
         // Originator's Short Name
-        sanitizeCPA005Text(originatorShortName)
-          .padEnd(FIELD_WIDTHS.originatorShortName, ' ')
-          .slice(0, FIELD_WIDTHS.originatorShortName) +
-        // Credit: Payee Name
-        // Debit: Payor Name
-        sanitizeCPA005Text(segment.payeeName)
-          .padEnd(FIELD_WIDTHS.payeeName, ' ')
-          .slice(0, FIELD_WIDTHS.payeeName) +
+        EFTFileSpec.fixedField(
+          sanitizeCPA005Text(originatorShortName),
+          widths.originatorShortName,
+          LEFT_SPACE
+        ) +
+        // Credit: Payee Name / Debit: Payor Name
+        EFTFileSpec.fixedField(
+          sanitizeCPA005Text(segment.payeeName),
+          widths.payeeName,
+          LEFT_SPACE
+        ) +
         // Originator's Long Name
-        sanitizeCPA005Text(eftConfig.originatorLongName)
-          .padEnd(FIELD_WIDTHS.originatorLongName, ' ')
-          .slice(0, FIELD_WIDTHS.originatorLongName) +
+        EFTFileSpec.fixedField(
+          sanitizeCPA005Text(eftConfig.originatorLongName),
+          widths.originatorLongName,
+          LEFT_SPACE
+        ) +
         // Filler (positions 165-174)
-        fixedField('', FIELD_WIDTHS.segmentFillerBlanks, LEFT_SPACE) +
+        EFTFileSpec.fixedField('', widths.segmentFillerBlanks, LEFT_SPACE) +
         // Cross Reference Number
-        sanitizeCPA005Text(crossReferenceNumber)
-          .padEnd(FIELD_WIDTHS.crossReference, ' ')
-          .slice(0, FIELD_WIDTHS.crossReference) +
-        // Institutional ID Number for Returns
-        fixedField('', FIELD_WIDTHS.institutionalIdLead, RIGHT_ZERO) +
+        EFTFileSpec.fixedField(
+          sanitizeCPA005Text(crossReferenceNumber),
+          widths.crossReference,
+          LEFT_SPACE
+        ) +
+        // Institutional ID Number for Returns (lead zero)
+        EFTFileSpec.fixedField('', widths.institutionalIdLead, RIGHT_ZERO) +
         // Institution Number for Returns
         (eftConfig.returnInstitutionNumber === undefined
-          ? fixedField('', FIELD_WIDTHS.institutionNumber, LEFT_SPACE)
-          : fixedField(
+          ? EFTFileSpec.fixedField('', widths.institutionNumber, LEFT_SPACE)
+          : EFTFileSpec.fixedField(
               eftConfig.returnInstitutionNumber,
-              FIELD_WIDTHS.institutionNumber,
+              widths.institutionNumber,
               RIGHT_ZERO
             )) +
         // Transit Number for Returns
         (eftConfig.returnTransitNumber === undefined
-          ? fixedField('', FIELD_WIDTHS.transitNumber, LEFT_SPACE)
-          : fixedField(
+          ? EFTFileSpec.fixedField('', widths.transitNumber, LEFT_SPACE)
+          : EFTFileSpec.fixedField(
               eftConfig.returnTransitNumber,
-              FIELD_WIDTHS.transitNumber,
+              widths.transitNumber,
               RIGHT_ZERO
             )) +
         // Account Number for Returns
-        fixedField(
+        EFTFileSpec.fixedField(
           eftConfig.returnAccountNumber ?? '',
-          FIELD_WIDTHS.accountNumber,
+          widths.accountNumber,
           LEFT_SPACE
         ) +
         trailingFiller;
@@ -234,62 +239,60 @@ export class EFTFileGenerator {
       }
     }
 
-    if (record !== '') {
-      // Pad the final record (which may have fewer than 6 segments) up to
-      // RECORD_LENGTH, then assert the result.
-      lines.push(assertRecordLength(record.padEnd(RECORD_LENGTH, ' '), 'transaction'));
-    }
-
-    return lines;
+    return EFTFileSpec.assertRecordLength(
+      record.padEnd(EFTFileSpec.RECORD_LENGTH, ' '),
+      'transaction'
+    );
   }
 
   generateTrailer(): string {
     const eftConfig = this.#builder.getConfiguration();
+    const widths = EFTFileSpec.FIELD_WIDTHS;
 
     const record =
       // Logical Record Type Id
       RECORD_TYPE.TRAILER +
       // Logical Record Count
-      fixedField(
+      EFTFileSpec.fixedField(
         (this.#recordCount + 1).toString(),
-        FIELD_WIDTHS.logicalRecordCount,
+        widths.logicalRecordCount,
         RIGHT_ZERO
       ) +
       // Origination Control Data
-      fixedField(eftConfig.originatorId, FIELD_WIDTHS.originatorId, LEFT_SPACE) +
-      fixedField(
+      EFTFileSpec.fixedField(eftConfig.originatorId, widths.originatorId, LEFT_SPACE) +
+      EFTFileSpec.fixedField(
         eftConfig.fileCreationNumber,
-        FIELD_WIDTHS.fileCreationNumber,
+        widths.fileCreationNumber,
         RIGHT_ZERO
       ) +
       // Total Value of Debit Transactions
-      fixedField(
+      EFTFileSpec.fixedField(
         Math.round(this.#totalValueDebits * 100).toString(),
-        FIELD_WIDTHS.totalValueDebits,
+        widths.totalValueDebits,
         RIGHT_ZERO
       ) +
       // Total Number of Debit Transactions
-      fixedField(
+      EFTFileSpec.fixedField(
         this.#totalNumberDebits.toString(),
-        FIELD_WIDTHS.totalNumberDebits,
+        widths.totalNumberDebits,
         RIGHT_ZERO
       ) +
       // Total Value of Credit Transactions
-      fixedField(
+      EFTFileSpec.fixedField(
         Math.round(this.#totalValueCredits * 100).toString(),
-        FIELD_WIDTHS.totalValueCredits,
+        widths.totalValueCredits,
         RIGHT_ZERO
       ) +
       // Total Number of Credit Transactions
-      fixedField(
+      EFTFileSpec.fixedField(
         this.#totalNumberCredits.toString(),
-        FIELD_WIDTHS.totalNumberCredits,
+        widths.totalNumberCredits,
         RIGHT_ZERO
       ) +
       // Filler (positions 69-1464)
-      fixedField('', FIELD_WIDTHS.trailerFiller, LEFT_SPACE);
+      EFTFileSpec.fixedField('', widths.trailerFiller, LEFT_SPACE);
 
-    return assertRecordLength(record, 'trailer');
+    return EFTFileSpec.assertRecordLength(record, 'trailer');
   }
 
   #resetCounters(): void {
