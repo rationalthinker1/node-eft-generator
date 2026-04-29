@@ -37,7 +37,7 @@ export class EFTFileValidator {
 
     if (!/^\d{0,5}$/.test(eftConfig.destinationDataCentre ?? '')) {
       throw new Error(
-        `destinationDataCentre should be 1 to 5 digits: ${eftConfig.destinationDataCentre}`
+        `destinationDataCentre should be 1 to 5 digits: ${eftConfig.destinationDataCentre ?? '<unset>'}`
       );
     }
 
@@ -80,7 +80,7 @@ export class EFTFileValidator {
 
     if (!['', 'CAD', 'USD'].includes(eftConfig.destinationCurrency ?? '')) {
       throw new Error(
-        `Unsupported destinationCurrency: ${eftConfig.destinationCurrency}`
+        `Unsupported destinationCurrency: ${eftConfig.destinationCurrency ?? '<unset>'}`
       );
     }
 
@@ -165,17 +165,20 @@ export class EFTFileValidator {
 
         if (segment.amount <= 0) {
           throw new Error(
-            `Segment amount cannot be less than or equal to zero: ${segment.amount}`
+            `Segment amount cannot be less than or equal to zero: ${String(segment.amount)}`
           );
         }
 
         if (segment.amount >= 100_000_000) {
           throw new Error(
-            `Segment amount cannot exceed $100,000,000: ${segment.amount}`
+            `Segment amount cannot exceed $100,000,000: ${String(segment.amount)}`
           );
         }
 
-        if (!/^\d{1,3}$/.test(segment.bankInstitutionNumber) && !segment.bankInstitutionNumber.startsWith('0')) {
+        if (
+          !/^\d{1,3}$/.test(segment.bankInstitutionNumber) &&
+          !segment.bankInstitutionNumber.startsWith('0')
+        ) {
           throw new Error(
             `bankInstitutionNumber should be 1 to 3 digits and start with '0': ${segment.bankInstitutionNumber}`
           );

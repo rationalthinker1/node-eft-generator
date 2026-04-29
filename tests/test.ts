@@ -4,11 +4,7 @@ import { describe, it } from 'node:test';
 
 import { EFTFileValidator } from '#EFTFileValidator';
 import { EFTFileBuilder } from '#index';
-import {
-  RECORD_TYPE,
-  TRANSACTION_TYPE,
-  type EFTConfiguration
-} from '#types';
+import { RECORD_TYPE, TRANSACTION_TYPE, type EFTConfiguration } from '#types';
 import { NEWLINE as cpa005_newline } from '#utils';
 
 const config: EFTConfiguration = {
@@ -168,10 +164,12 @@ await describe('eft-generator - CPA-005', async () => {
       });
 
       assert.ok(
-        new EFTFileValidator(eftGenerator).validate().some(
-          (validationWarning) =>
-            validationWarning.warningField === 'originatorShortName'
-        )
+        new EFTFileValidator(eftGenerator)
+          .validate()
+          .some(
+            (validationWarning) =>
+              validationWarning.warningField === 'originatorShortName'
+          )
       );
     });
   });
@@ -418,9 +416,9 @@ await describe('eft-generator - CPA-005', async () => {
       });
 
       assert.ok(
-        new EFTFileValidator(eftGenerator).validate().some(
-          (validationWarning) => validationWarning.warningField === 'payeeName'
-        )
+        new EFTFileValidator(eftGenerator)
+          .validate()
+          .some((validationWarning) => validationWarning.warningField === 'payeeName')
       );
     });
 
@@ -448,10 +446,12 @@ await describe('eft-generator - CPA-005', async () => {
       });
 
       assert.ok(
-        new EFTFileValidator(eftGenerator).validate().some(
-          (validationWarning) =>
-            validationWarning.warningField === 'crossReferenceNumber'
-        )
+        new EFTFileValidator(eftGenerator)
+          .validate()
+          .some(
+            (validationWarning) =>
+              validationWarning.warningField === 'crossReferenceNumber'
+          )
       );
     });
   });
@@ -504,11 +504,13 @@ await describe('eft-generator - CPA-005', async () => {
       });
 
       assert.ok(
-        new EFTFileValidator(eftGenerator).validate().some(
-          (validationWarning) =>
-            validationWarning.warningField === 'originatorShortName' &&
-            validationWarning.warning.toLowerCase().includes('prohibited')
-        )
+        new EFTFileValidator(eftGenerator)
+          .validate()
+          .some(
+            (validationWarning) =>
+              validationWarning.warningField === 'originatorShortName' &&
+              validationWarning.warning.toLowerCase().includes('prohibited')
+          )
       );
     });
 
@@ -519,11 +521,13 @@ await describe('eft-generator - CPA-005', async () => {
       });
 
       assert.ok(
-        new EFTFileValidator(eftGenerator).validate().some(
-          (validationWarning) =>
-            validationWarning.warningField === 'originatorLongName' &&
-            validationWarning.warning.toLowerCase().includes('prohibited')
-        )
+        new EFTFileValidator(eftGenerator)
+          .validate()
+          .some(
+            (validationWarning) =>
+              validationWarning.warningField === 'originatorLongName' &&
+              validationWarning.warning.toLowerCase().includes('prohibited')
+          )
       );
     });
   });
@@ -552,21 +556,27 @@ await describe('eft-generator - CPA-005', async () => {
 
     await it('C record field 13 (positions 165-174) is 10 blanks (spec page 60)', () => {
       const lines = buildSampleOutput().split('\r');
-      const cRecord = lines.find((line) => line.startsWith(RECORD_TYPE.TRANSACTION_CREDIT));
+      const cRecord = lines.find((line) =>
+        line.startsWith(RECORD_TYPE.TRANSACTION_CREDIT)
+      );
       assert.ok(cRecord, 'expected at least one C record');
       assert.strictEqual(cRecord.slice(164, 174), ' '.repeat(10));
     });
 
     await it('D record field 13 (positions 165-174) is 10 blanks (spec page 63)', () => {
       const lines = buildSampleOutput().split('\r');
-      const dRecord = lines.find((line) => line.startsWith(RECORD_TYPE.TRANSACTION_DEBIT));
+      const dRecord = lines.find((line) =>
+        line.startsWith(RECORD_TYPE.TRANSACTION_DEBIT)
+      );
       assert.ok(dRecord, 'expected at least one D record');
       assert.strictEqual(dRecord.slice(164, 174), ' '.repeat(10));
     });
 
     await it('D record positions 215-247 are 33 zeros (spec page 64)', () => {
       const lines = buildSampleOutput().split('\r');
-      const dRecord = lines.find((line) => line.startsWith(RECORD_TYPE.TRANSACTION_DEBIT));
+      const dRecord = lines.find((line) =>
+        line.startsWith(RECORD_TYPE.TRANSACTION_DEBIT)
+      );
       assert.ok(dRecord);
       assert.strictEqual(dRecord.slice(214, 247), '0'.repeat(33));
     });

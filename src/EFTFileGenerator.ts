@@ -1,11 +1,7 @@
 import type { EFTFileBuilder } from '#EFTFileBuilder';
 import { EFTFileValidator } from '#EFTFileValidator';
 import { RECORD_TYPE, TRANSACTION_TYPE, type EFTTransaction } from '#types';
-import {
-  NEWLINE,
-  sanitizeCPA005Text,
-  toPaddedJulianDate
-} from '#utils';
+import { NEWLINE, sanitizeCPA005Text, toPaddedJulianDate } from '#utils';
 
 export class EFTFileGenerator {
   readonly #builder: EFTFileBuilder;
@@ -28,7 +24,7 @@ export class EFTFileGenerator {
     const validationWarnings = this.#validator.validate();
     if (validationWarnings.length > 0) {
       console.debug(
-        `Proceeding with ${validationWarnings.length} warnings.`,
+        `Proceeding with ${String(validationWarnings.length)} warnings.`,
         validationWarnings
       );
     }
@@ -93,11 +89,7 @@ export class EFTFileGenerator {
     const lines: string[] = [];
     let record = '';
 
-    for (
-      let segmentIndex = 0;
-      segmentIndex < transaction.segments.length;
-      segmentIndex += 1
-    ) {
+    for (const [segmentIndex, segment] of transaction.segments.entries()) {
       if (segmentIndex % 6 === 0) {
         if (segmentIndex > 0) {
           lines.push(record);
@@ -121,11 +113,7 @@ export class EFTFileGenerator {
           eftConfig.fileCreationNumber.padStart(4, '0');
       }
 
-      const segment = transaction.segments[segmentIndex];
-
-      const paymentJulianDate = toPaddedJulianDate(
-        segment.paymentDate ?? new Date()
-      );
+      const paymentJulianDate = toPaddedJulianDate(segment.paymentDate ?? new Date());
 
       let crossReferenceNumber = segment.crossReferenceNumber;
 
@@ -173,9 +161,7 @@ export class EFTFileGenerator {
         // Debit: Payor Name
         sanitizeCPA005Text(segment.payeeName).padEnd(30, ' ').slice(0, 30) +
         // Originator's Long Name
-        sanitizeCPA005Text(eftConfig.originatorLongName)
-          .padEnd(30, ' ')
-          .slice(0, 30) +
+        sanitizeCPA005Text(eftConfig.originatorLongName).padEnd(30, ' ').slice(0, 30) +
         // Filler (positions 165-174)
         ''.padEnd(10, ' ') +
         // Cross Reference Number

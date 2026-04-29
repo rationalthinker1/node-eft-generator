@@ -48,6 +48,10 @@
   "scripts": {
     "build": "tsc",
     "build:tests": "tsc -p tsconfig.test.json",
+    "lint": "eslint .",
+    "format": "prettier --write '{src,tests}/**/*.ts'",
+    "format:check": "prettier --check '{src,tests}/**/*.ts'",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
     "prepublishOnly": "yarn build",
     "coverage": "yarn build && yarn build:tests && c8 --reporter=lcov --reporter=text --reporter=text-summary node --test \"build/tests/**/*.js\"",
     "test": "yarn build && yarn build:tests && node --test \"build/tests/**/*.js\""

@@ -4,17 +4,19 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "customConditions": ["development"],
-    "isolatedModules": false,
+    "isolatedModules": true,
     "declaration": true,
     "outDir": "./build",
     "rootDir": "./src",
     "types": ["node"],
-    "noImplicitAny": false,
     "allowUnreachableCode": false,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "strictNullChecks": true
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true
   },
   "include": ["src/**/*.ts"]
 }

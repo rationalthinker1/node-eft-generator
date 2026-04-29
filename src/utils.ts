@@ -26,5 +26,5 @@ export function toPaddedJulianDate(date: Date): `0${string}` {
   const yy = (year % 100).toString().padStart(2, '0');
   const ddd = dayOfYear.toString().padStart(3, '0');
 
-  return `0${yy}${ddd}` as `0${string}`;
+  return `0${yy}${ddd}`;
 }
