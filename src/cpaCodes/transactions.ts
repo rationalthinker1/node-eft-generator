@@ -13,6 +13,8 @@ export const cpaTransactionCodes = {
 
 export type CPATransactionCode = keyof typeof cpaTransactionCodes;
 
-export function isCPATransactionCode(cpaCode: string | CPATransactionCode): cpaCode is CPATransactionCode {
+export function isCPATransactionCode(
+  cpaCode: string | CPATransactionCode
+): cpaCode is CPATransactionCode {
   return Object.hasOwn(cpaTransactionCodes, cpaCode);
 }

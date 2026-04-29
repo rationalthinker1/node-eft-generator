@@ -5,44 +5,44 @@ export interface EFTConfiguration {
    * - Company ID
    * - Customer Number
    */
-  originatorId: string
+  originatorId: string;
 
-  originatorShortName?: string
-  originatorLongName: string
+  originatorShortName?: string;
+  originatorLongName: string;
 
   /**
    * Four digit number.
    * Should be different from previous 10 numbers submitted for processing.
    */
-  fileCreationNumber: string
+  fileCreationNumber: string;
 
   /**
    * If not set, will use today.
    */
-  fileCreationDate?: Date
+  fileCreationDate?: Date;
 
   /**
    * Also known as:
    * - Processing Centre
    */
-  destinationDataCentre?: string
+  destinationDataCentre?: string;
 
-  destinationCurrency?: 'CAD' | 'USD'
+  destinationCurrency?: 'CAD' | 'USD';
 
   /**
    * Three digits
    */
-  returnInstitutionNumber?: string
+  returnInstitutionNumber?: string;
 
   /**
    * Five digits
    */
-  returnTransitNumber?: string
+  returnTransitNumber?: string;
 
   /**
    * Up to 12 digits
    */
-  returnAccountNumber?: string
+  returnAccountNumber?: string;
 }
 
 export const TRANSACTION_TYPE = {
@@ -50,7 +50,7 @@ export const TRANSACTION_TYPE = {
   DEBIT: 'D'
 } as const;
 
-export type TransactionType = typeof TRANSACTION_TYPE[keyof typeof TRANSACTION_TYPE]; // 'C' | 'D'
+export type TransactionType = (typeof TRANSACTION_TYPE)[keyof typeof TRANSACTION_TYPE]; // 'C' | 'D'
 
 export const RECORD_TYPE = {
   HEADER: 'A',
@@ -58,67 +58,67 @@ export const RECORD_TYPE = {
   TRANSACTION_DEBIT: 'D',
   TRAILER: 'Z'
 } as const;
-export type RecordType = typeof RECORD_TYPE[keyof typeof RECORD_TYPE]; // 'A' | 'C' | 'D' | 'Z'
+export type RecordType = (typeof RECORD_TYPE)[keyof typeof RECORD_TYPE]; // 'A' | 'C' | 'D' | 'Z'
 
 export interface EFTTransaction {
   /**
    * C = Credit - sending funds
    * D = Debit  - receiving funds
    */
-  recordType: TransactionType
+  recordType: TransactionType;
 
-  segments: EFTTransactionSegment[]
+  segments: EFTTransactionSegment[];
 }
 
 export interface EFTTransactionSegment {
-  cpaCode: `${number}`
+  cpaCode: `${number}`;
 
   /**
    * In dollars
    */
-  amount: number
+  amount: number;
 
   /**
    * If not set, will use today.
    */
-  paymentDate?: Date
+  paymentDate?: Date;
 
   /**
    * Three digits
    */
-  bankInstitutionNumber: `${number}`
+  bankInstitutionNumber: `${number}`;
 
   /**
    * Five digits
    */
-  bankTransitNumber: `${number}`
+  bankTransitNumber: `${number}`;
 
   /**
    * 5-12 digits
    */
-  bankAccountNumber: `${number}`
+  bankAccountNumber: `${number}`;
 
-  payeeName: string
+  payeeName: string;
 
-  crossReferenceNumber?: string
+  crossReferenceNumber?: string;
 }
 
 export type ValidationWarning = {
-  warning: string
+  warning: string;
 } & (
-    | {
-      warningField: keyof EFTConfiguration | 'transactions'
+  | {
+      warningField: keyof EFTConfiguration | 'transactions';
     }
-    | {
-      transactionIndex: number
-      warningField: keyof EFTTransaction
+  | {
+      transactionIndex: number;
+      warningField: keyof EFTTransaction;
     }
-    | {
-      transactionIndex: number
-      transactionSegmentIndex: number
-      warningField: keyof EFTTransactionSegment
+  | {
+      transactionIndex: number;
+      transactionSegmentIndex: number;
+      warningField: keyof EFTTransactionSegment;
     }
-  );
+);
 
 export type CPACodeString = number;
 

@@ -1,6 +1,6 @@
 {
   "name": "@rationalthinker1/eft-generator",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Formats Electronic Funds Transfer (EFT) data into the CPA 005 standard.",
   "keywords": [
     "banking",
@@ -48,6 +48,10 @@
   "scripts": {
     "build": "tsc",
     "build:tests": "tsc -p tsconfig.test.json",
+    "lint": "eslint .",
+    "format": "prettier --write '{src,tests}/**/*.ts'",
+    "format:check": "prettier --check '{src,tests}/**/*.ts'",
+    "typecheck": "tsc -p tsconfig.test.typecheck.json",
     "prepublishOnly": "yarn build",
     "coverage": "yarn build && yarn build:tests && c8 --reporter=lcov --reporter=text --reporter=text-summary node --test \"build/tests/**/*.js\"",
     "test": "yarn build && yarn build:tests && node --test \"build/tests/**/*.js\""
