@@ -7,7 +7,7 @@ import {
   toPaddedJulianDate
 } from '#utils';
 
-export class EFTGenerator {
+export class EFTFileGenerator {
   readonly #builder: EFTFileBuilder;
   readonly #validator: EFTFileValidator;
 

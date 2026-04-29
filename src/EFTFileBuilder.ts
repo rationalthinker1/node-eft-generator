@@ -1,5 +1,5 @@
 import { EFTFileValidator } from '#EFTFileValidator';
-import { EFTGenerator } from '#EFTGenerator';
+import { EFTFileGenerator } from '#EFTFileGenerator';
 import {
   TRANSACTION_TYPE,
   type EFTConfiguration,
@@ -11,13 +11,13 @@ export class EFTFileBuilder {
   readonly #config: EFTConfiguration;
   readonly #transactions: EFTTransaction[];
   readonly #validator: EFTFileValidator;
-  readonly #generator: EFTGenerator;
+  readonly #generator: EFTFileGenerator;
 
   constructor(config: EFTConfiguration) {
     this.#config = config;
     this.#transactions = [];
     this.#validator = new EFTFileValidator(this);
-    this.#generator = new EFTGenerator(this);
+    this.#generator = new EFTFileGenerator(this);
   }
 
   getConfiguration(): EFTConfiguration {
