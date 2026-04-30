@@ -259,6 +259,14 @@ export class Segment implements Printable, Loggable, Validable {
         `<dim>${bankStr}</dim>` +
         `<dim>${cpa}</dim>`
     );
+
+    if (containsProhibitedCharacters(this.payeeName)) {
+      console.warn(
+        Logger.format(
+          `<yellow>  ⚠  payeeName contains prohibited characters and will be sanitized: ${this.payeeName}</yellow>`
+        )
+      );
+    }
   }
 
   /**
@@ -266,8 +274,9 @@ export class Segment implements Printable, Loggable, Validable {
    * crossReferenceNumber is checked at the file level by EFTFileValidator
    * (it spans all segments across all transactions).
    *
-   * Text fields are validated before generation so fixed-width rendering
-   * never needs to repair prohibited CPA-005 characters.
+   * Note: prohibited characters in payeeName are intentionally tolerated
+   * here — the warning is emitted by log() at write time. Real-world
+   * payee names commonly contain hyphens and apostrophes.
    */
   validate(): void {
     const cfg = this.#builder.getConfiguration();
@@ -288,9 +297,6 @@ export class Segment implements Printable, Loggable, Validable {
       throw new Error(
         `payeeName exceeds ${String(SEGMENT_FIELD_WIDTHS.payeeName)} characters: ${this.payeeName}`
       );
-    }
-    if (containsProhibitedCharacters(this.payeeName)) {
-      throw new Error(`payeeName contains prohibited characters: ${this.payeeName}`);
     }
 
     if (this.crossReferenceNumber !== undefined) {

@@ -32,6 +32,12 @@ const MINIMUM_RECORD_COUNT = 3;
  *    offset, crossReferenceNumber length and characters
  *  - {@link Trailer.validate}: trivial (totals are derived)
  *
+ * Prohibited characters in `payeeName` are accepted and sanitized at
+ * write time (third-party data routinely contains hyphens like
+ * 'GOLDSTEIN-KRUPSKI' and apostrophes like O'BRIEN). The corresponding
+ * `console.warn` is emitted by `Segment.log` so it stays next to the
+ * transaction it describes.
+ *
  * The validator is run automatically by `EFTFileBuilder.generate()`,
  * so any throw aborts file generation before any record is emitted.
  */
