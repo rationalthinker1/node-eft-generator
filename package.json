@@ -1,6 +1,6 @@
 {
   "name": "@rationalthinker1/eft-generator",
-  "version": "8.0.4",
+  "version": "8.0.5",
   "description": "Formats Electronic Funds Transfer (EFT) data into the CPA 005 standard.",
   "keywords": [
     "banking",
@@ -104,11 +104,11 @@
     },
     "#types": {
       "development": {
-        "types": "./src/domain/types.ts",
-        "default": "./build/domain/types.js"
+        "types": "./src/types.ts",
+        "default": "./build/types.js"
       },
-      "types": "./build/domain/types.d.ts",
-      "default": "./build/domain/types.js"
+      "types": "./build/types.d.ts",
+      "default": "./build/types.js"
     },
     "#utils": {
       "development": {
@@ -131,6 +131,7 @@
     "build/index.*",
     "build/EFTFileBuilder.*",
     "build/EFTFileValidator.*",
+    "build/types.*",
     "build/domain/",
     "build/records/",
     "build/utils/"

@@ -1,4 +1,4 @@
-import type { CPACode, CPACodeNumber } from '#domain/types';
+import type { CPACode, CPACodeNumber } from '#types';
 
 const cpaTransactionCodesPreauthorized = {
   200: {

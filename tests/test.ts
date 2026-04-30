@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { describe, it } from 'node:test';
 
 import { BankPADInformation, EFTFileBuilder, EFTFileValidator } from '#index';
-import { RECORD_TYPE, TRANSACTION_TYPE, type EFTConfiguration } from '#domain/types';
+import { RECORD_TYPE, TRANSACTION_TYPE, type EFTConfiguration } from '#types';
 import type { CPATransactionCode } from '#domain/CPACodes';
 import { NEWLINE as cpa005_newline } from '#utils/index';
 

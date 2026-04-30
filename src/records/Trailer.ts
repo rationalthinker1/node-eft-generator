@@ -1,5 +1,5 @@
 import type { EFTFileBuilder } from '#EFTFileBuilder';
-import { Field, renderFields } from '#records/Field';
+import { Field, renderFields, validateFields } from '#records/Field';
 import { Logger } from '#utils/Logger';
 import {
   RECORD_TYPE,
@@ -7,7 +7,7 @@ import {
   type Loggable,
   type Printable,
   type Validable
-} from '#domain/types';
+} from '#types';
 import { assertRecordLength, sanitizeCPA005Text } from '#utils/index';
 
 const RECORD_LENGTH = 1464;
@@ -111,12 +111,12 @@ export class Trailer implements Printable, Loggable, Validable {
 
   /**
    * Trailer is fully derived from inputs the validator already exercised
-   * upstream (config via Header, segment values via Segment). Implemented
-   * for symmetry with the Validable contract; no additional invariants
-   * to check here.
+   * upstream (config via Header, segment values via Segment). It still
+   * runs any field-local decorator validators for symmetry with the
+   * Validable contract.
    */
   validate(): void {
-    // intentionally empty
+    validateFields(this, Trailer);
   }
 
   log(): void {

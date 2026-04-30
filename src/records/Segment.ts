@@ -5,7 +5,7 @@ import type {
 } from '#domain/BankPADInformation';
 import type { CPATransactionCode } from '#domain/CPACodes';
 import type { EFTFileBuilder } from '#EFTFileBuilder';
-import { Field, formatField, renderFields } from '#records/Field';
+import { Field, formatField, renderFields, validateFields } from '#records/Field';
 import { Logger } from '#utils/Logger';
 import {
   TRANSACTION_TYPE,
@@ -14,7 +14,7 @@ import {
   type Printable,
   type Validable,
   type TransactionType
-} from '#domain/types';
+} from '#types';
 import {
   assertRecordLength,
   containsProhibitedCharacters,
@@ -122,7 +122,14 @@ export class Segment implements Printable, Loggable, Validable {
     end: 110,
     pad: ' ',
     align: 'left',
-    transform: (v) => sanitizeCPA005Text(v as string)
+    transform: (v) => sanitizeCPA005Text(v as string),
+    validate: (value) => {
+      if (value.length > SEGMENT_FIELD_WIDTHS.payeeName) {
+        throw new Error(
+          `payeeName exceeds ${String(SEGMENT_FIELD_WIDTHS.payeeName)} characters: ${value}`
+        );
+      }
+    }
   })
   payeeName!: string;
 
@@ -149,6 +156,13 @@ export class Segment implements Printable, Loggable, Validable {
         (raw as string | undefined) ??
         defaultCrossRef(seg.fileCreationNumber, seg.recordNumber, seg.segmentIndex);
       return sanitizeCPA005Text(value);
+    },
+    validate: (value) => {
+      if (value.length > SEGMENT_FIELD_WIDTHS.crossReference) {
+        throw new Error(
+          `crossReferenceNumber exceeds ${String(SEGMENT_FIELD_WIDTHS.crossReference)} characters: ${value}`
+        );
+      }
     }
   })
   crossReferenceNumber: string | undefined;
@@ -282,6 +296,8 @@ export class Segment implements Printable, Loggable, Validable {
     const cfg = this.#builder.getConfiguration();
     const fileCreationDate = cfg.fileCreationDate ?? new Date();
 
+    validateFields(this, Segment);
+
     if (this.amount <= 0) {
       throw new Error(
         `Segment ${String(this.segmentIndex)} amount must be positive: ${String(this.amount)}`
@@ -293,23 +309,13 @@ export class Segment implements Printable, Loggable, Validable {
       );
     }
 
-    if (this.payeeName.length > SEGMENT_FIELD_WIDTHS.payeeName) {
+    if (
+      this.crossReferenceNumber !== undefined &&
+      containsProhibitedCharacters(this.crossReferenceNumber)
+    ) {
       throw new Error(
-        `payeeName exceeds ${String(SEGMENT_FIELD_WIDTHS.payeeName)} characters: ${this.payeeName}`
+        `crossReferenceNumber contains prohibited characters: ${this.crossReferenceNumber}`
       );
-    }
-
-    if (this.crossReferenceNumber !== undefined) {
-      if (this.crossReferenceNumber.length > SEGMENT_FIELD_WIDTHS.crossReference) {
-        throw new Error(
-          `crossReferenceNumber exceeds ${String(SEGMENT_FIELD_WIDTHS.crossReference)} characters: ${this.crossReferenceNumber}`
-        );
-      }
-      if (containsProhibitedCharacters(this.crossReferenceNumber)) {
-        throw new Error(
-          `crossReferenceNumber contains prohibited characters: ${this.crossReferenceNumber}`
-        );
-      }
     }
 
     const offsetMs = this.paymentDate.getTime() - fileCreationDate.getTime();

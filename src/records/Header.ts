@@ -1,13 +1,8 @@
 import type { EFTFileBuilder } from '#EFTFileBuilder';
-import { Field, formatField, renderFields } from '#records/Field';
+import { Field, formatField, renderFields, validateFields } from '#records/Field';
 import { Logger } from '#utils/Logger';
 import { SEGMENT_FIELD_WIDTHS } from '#records/Segment';
-import {
-  RECORD_TYPE,
-  type Loggable,
-  type Printable,
-  type Validable
-} from '#domain/types';
+import { RECORD_TYPE, type Loggable, type Printable, type Validable } from '#types';
 import {
   assertRecordLength,
   containsProhibitedCharacters,
@@ -38,11 +33,28 @@ export class Header implements Printable, Loggable, Validable {
     end: 20,
     pad: ' ',
     align: 'left',
-    transform: (v) => sanitizeCPA005Text(v as string)
+    transform: (v) => sanitizeCPA005Text(v as string),
+    validate: (value) => {
+      if (value.length > HEADER_FIELD_WIDTHS.originatorId) {
+        throw new Error(
+          `originatorId length exceeds ${String(HEADER_FIELD_WIDTHS.originatorId)}: ${value}`
+        );
+      }
+    }
   })
   originatorId!: string;
 
-  @Field({ start: 21, end: 24, pad: '0', align: 'right' })
+  @Field({
+    start: 21,
+    end: 24,
+    pad: '0',
+    align: 'right',
+    validate: (value) => {
+      if (!/^\d{1,4}$/.test(value)) {
+        throw new Error(`fileCreationNumber should be 1 to 4 digits: ${value}`);
+      }
+    }
+  })
   fileCreationNumber!: string;
 
   @Field({
@@ -54,13 +66,33 @@ export class Header implements Printable, Loggable, Validable {
   })
   fileCreationDate!: Date;
 
-  @Field({ start: 31, end: 35, pad: '0', align: 'right' })
+  @Field({
+    start: 31,
+    end: 35,
+    pad: '0',
+    align: 'right',
+    validate: (value) => {
+      if (!/^\d{1,5}$/.test(value)) {
+        throw new Error(`destinationDataCentre should be 1 to 5 digits: ${value}`);
+      }
+    }
+  })
   destinationDataCentre!: string;
 
   @Field({ start: 36, end: 55, pad: ' ', align: 'left' })
   reservedHeader = '';
 
-  @Field({ start: 56, end: 58, pad: ' ', align: 'left' })
+  @Field({
+    start: 56,
+    end: 58,
+    pad: ' ',
+    align: 'left',
+    validate: (value) => {
+      if (!['', 'CAD', 'USD'].includes(value)) {
+        throw new Error(`Unsupported destinationCurrency: ${value || '<unset>'}`);
+      }
+    }
+  })
   destinationCurrency!: string;
 
   @Field({ start: 59, end: RECORD_LENGTH, pad: ' ', align: 'left' })
@@ -91,25 +123,10 @@ export class Header implements Printable, Loggable, Validable {
   validate(): void {
     const cfg = this.#builder.getConfiguration();
 
-    if (cfg.originatorId.length > HEADER_FIELD_WIDTHS.originatorId) {
-      throw new Error(
-        `originatorId length exceeds ${String(HEADER_FIELD_WIDTHS.originatorId)}: ${cfg.originatorId}`
-      );
-    }
+    validateFields(this, Header);
+
     if (containsProhibitedCharacters(cfg.originatorId)) {
       throw new Error(`originatorId contains prohibited characters: ${cfg.originatorId}`);
-    }
-
-    if (!/^\d{1,4}$/.test(cfg.fileCreationNumber)) {
-      throw new Error(
-        `fileCreationNumber should be 1 to 4 digits: ${cfg.fileCreationNumber}`
-      );
-    }
-
-    if (!/^\d{1,5}$/.test(cfg.destinationDataCentre)) {
-      throw new Error(
-        `destinationDataCentre should be 1 to 5 digits: ${cfg.destinationDataCentre}`
-      );
     }
 
     if (cfg.originatorShortName.length > HEADER_FIELD_WIDTHS.originatorShortName) {
@@ -131,12 +148,6 @@ export class Header implements Printable, Loggable, Validable {
     if (containsProhibitedCharacters(cfg.originatorLongName)) {
       throw new Error(
         `originatorLongName contains prohibited characters: ${cfg.originatorLongName}`
-      );
-    }
-
-    if (!['', 'CAD', 'USD'].includes(cfg.destinationCurrency ?? '')) {
-      throw new Error(
-        `Unsupported destinationCurrency: ${cfg.destinationCurrency ?? '<unset>'}`
       );
     }
 

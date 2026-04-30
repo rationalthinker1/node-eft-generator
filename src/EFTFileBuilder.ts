@@ -4,7 +4,7 @@ import {
   type EFTConfiguration,
   type EFTTransaction,
   type EFTTransactionSegment
-} from '#domain/types';
+} from '#types';
 import { Header } from '#records/Header';
 import { Trailer } from '#records/Trailer';
 import { Transaction } from '#records/Transaction';

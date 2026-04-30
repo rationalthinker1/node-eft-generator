@@ -13,6 +13,16 @@ export interface FieldSpec {
    * dates, sanitized text, or context-dependent fillers).
    */
   transform?: (raw: unknown, instance: object) => string;
+  /**
+   * Optional field-local validator. Receives the *transformed* value
+   * (i.e. the on-the-wire string the field will render, before padding)
+   * so that length, charset, and format checks operate on the actual
+   * output. Throw an Error when invalid. Cross-field, domain, or
+   * file-level invariants should stay in the owning class' validate()
+   * method — the transformed value is always a string, so range checks
+   * on numeric inputs (e.g. amount > 0) belong there, not here.
+   */
+  validate?: (value: string, instance: object) => void;
 }
 
 interface DecoratedField extends FieldSpec {
@@ -53,6 +63,14 @@ export function getFields(ctor: Ctor): DecoratedField[] {
   return [...fields].sort((a, b) => a.start - b.start);
 }
 
+function resolveFieldValue(field: DecoratedField, instance: object): string {
+  const raw = (instance as Record<string, unknown>)[field.propertyKey];
+  if (field.transform) {
+    return field.transform(raw, instance);
+  }
+  return typeof raw === 'string' ? raw : '';
+}
+
 /**
  * Invoke a property's own @Field transform on the current instance value.
  * Lets `log()` (or any other consumer) read a display-ready string
@@ -69,11 +87,7 @@ export function formatField<T extends Ctor>(
   if (!field) {
     throw new Error(`No @Field decorator for property "${propertyKey}" on ${ctor.name}.`);
   }
-  const raw = (instance as Record<string, unknown>)[propertyKey];
-  if (field.transform) {
-    return field.transform(raw, instance);
-  }
-  return typeof raw === 'string' ? raw : '';
+  return resolveFieldValue(field, instance);
 }
 
 /**
@@ -89,14 +103,22 @@ export function formatField<T extends Ctor>(
 export function renderFields(instance: object, ctor: Ctor): string {
   const parts: string[] = [];
   for (const f of getFields(ctor)) {
-    const raw = (instance as Record<string, unknown>)[f.propertyKey];
-    const value = f.transform
-      ? f.transform(raw, instance)
-      : typeof raw === 'string'
-        ? raw
-        : '';
+    const value = resolveFieldValue(f, instance);
     const width = f.end - f.start + 1;
     parts.push(fixedField(value, width, { align: f.align, pad: f.pad }));
   }
   return parts.join('');
+}
+
+/**
+ * Walks @Field-decorated properties on `instance` (in start-position
+ * order) and invokes each field's optional `validate` against the
+ * transformed value (the on-the-wire string the field will render,
+ * before width padding). Throws on the first violation found.
+ */
+export function validateFields(instance: object, ctor: Ctor): void {
+  for (const f of getFields(ctor)) {
+    if (!f.validate) continue;
+    f.validate(resolveFieldValue(f, instance), instance);
+  }
 }

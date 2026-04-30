@@ -2,7 +2,7 @@ import type { EFTFileBuilder } from '#EFTFileBuilder';
 import { Header } from '#records/Header';
 import { Trailer } from '#records/Trailer';
 import { Transaction } from '#records/Transaction';
-import { RECORD_TYPE } from '#domain/types';
+import { RECORD_TYPE } from '#types';
 import { NEWLINE } from '#utils/index';
 
 export const RECORD_LENGTH = 1464;

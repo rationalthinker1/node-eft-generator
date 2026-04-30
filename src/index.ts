@@ -21,8 +21,8 @@ export type {
 } from '#domain/BankPADInformation';
 export { CPATransactionCodes } from '#domain/CPACodes';
 export type { CPATransactionCode } from '#domain/CPACodes';
-export type { Loggable, Printable, Validable } from '#domain/types';
-export type * as types from '#domain/types';
+export type { Loggable, Printable, Validable } from '#types';
+export type * as types from '#types';
 
 export const FIELD_WIDTHS = {
   ...HEADER_FIELD_WIDTHS,

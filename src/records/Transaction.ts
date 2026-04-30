@@ -1,5 +1,5 @@
 import type { EFTFileBuilder } from '#EFTFileBuilder';
-import { Field, renderFields } from '#records/Field';
+import { Field, renderFields, validateFields } from '#records/Field';
 import { Segment } from '#records/Segment';
 import {
   TRANSACTION_TYPE,
@@ -8,7 +8,7 @@ import {
   type Printable,
   type Validable,
   type TransactionType
-} from '#domain/types';
+} from '#types';
 import { assertRecordLength, sanitizeCPA005Text } from '#utils/index';
 
 const RECORD_LENGTH = 1464;
@@ -21,7 +21,17 @@ export const MAX_SEGMENTS_PER_RECORD = 6;
  * pads to RECORD_LENGTH.
  */
 export class Transaction implements Printable, Loggable, Validable {
-  @Field({ start: 1, end: 1, pad: '0', align: 'right' })
+  @Field({
+    start: 1,
+    end: 1,
+    pad: '0',
+    align: 'right',
+    validate: (value) => {
+      if (value !== TRANSACTION_TYPE.CREDIT && value !== TRANSACTION_TYPE.DEBIT) {
+        throw new Error(`Unsupported recordType: ${value}`);
+      }
+    }
+  })
   recordType!: TransactionType;
 
   @Field({
@@ -92,9 +102,7 @@ export class Transaction implements Printable, Loggable, Validable {
   validate(): void {
     const transactionIndex = this.recordNumber - 2;
 
-    if (!Object.values(TRANSACTION_TYPE).includes(this.recordType)) {
-      throw new Error(`Unsupported recordType: ${this.recordType}`);
-    }
+    validateFields(this, Transaction);
 
     if (this.segments.length === 0) {
       throw new Error(`Transaction ${String(transactionIndex)} has no segments.`);
