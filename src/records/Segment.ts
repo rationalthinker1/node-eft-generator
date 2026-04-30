@@ -1,0 +1,315 @@
+import type {
+  BankAccount,
+  BankInstitution,
+  BankTransit
+} from '#domain/BankPADInformation';
+import type { CPATransactionCode } from '#domain/cpaCodes/transactions';
+import type { EFTFileBuilder } from '#EFTFileBuilder';
+import {
+  FIELD_WIDTHS,
+  MAX_PAYMENT_DATE_OFFSET_DAYS,
+  MAX_PAYMENT_DATE_OFFSET_MS,
+  MAX_TRANSACTION_AMOUNT
+} from '#domain/spec';
+import { Field, formatField, renderFields } from '#records/Field';
+import type { Loggable } from '#contracts/Loggable';
+import { Logger } from '#utils/Logger';
+import type { Printable } from '#contracts/Printable';
+import {
+  TRANSACTION_TYPE,
+  type EFTTransactionSegment,
+  type TransactionType
+} from '#domain/types';
+import type { Validable } from '#contracts/Validable';
+import {
+  assertRecordLength,
+  containsProhibitedCharacters,
+  sanitizeCPA005Text,
+  toPaddedJulianDate
+} from '#utils/index';
+
+const SEGMENT_LENGTH = 240;
+
+const blank = (n: number): string => ' '.repeat(n);
+const zero = (n: number): string => '0'.repeat(n);
+
+function defaultCrossRef(
+  fileCreationNumber: string,
+  recordNumber: number,
+  segmentIndex: number
+): string {
+  return (
+    'F' +
+    fileCreationNumber +
+    'R' +
+    recordNumber.toString() +
+    'S' +
+    (segmentIndex + 1).toString()
+  );
+}
+
+/**
+ * One CPA-005 transaction segment (240 chars). A transaction record
+ * holds 1 to 6 segments laid out end to end after a 24-char prefix.
+ *
+ * @Field positions are within the segment's own 1..240 coordinate
+ * space — the parent Transaction handles concatenation.
+ */
+export class Segment implements Printable, Loggable, Validable {
+  readonly #builder: EFTFileBuilder;
+
+  // Context-only properties (not @Field-decorated); used by transforms
+  // and log() but never rendered as their own field.
+  recordType!: TransactionType;
+  recordNumber!: number;
+  segmentIndex!: number;
+  fileCreationNumber!: string;
+
+  @Field({ start: 1, end: 3, pad: '0', align: 'right' })
+  cpaCode!: CPATransactionCode;
+
+  @Field({
+    start: 4,
+    end: 13,
+    pad: '0',
+    align: 'right',
+    transform: (v) => Math.round((v as number) * 100).toString()
+  })
+  amount!: number;
+
+  @Field({
+    start: 14,
+    end: 19,
+    pad: '0',
+    align: 'right',
+    transform: (v) => toPaddedJulianDate(v as Date)
+  })
+  paymentDate!: Date;
+
+  @Field({ start: 20, end: 20, pad: '0', align: 'right' })
+  institutionalIdLead = '';
+
+  @Field({ start: 21, end: 23, pad: '0', align: 'right' })
+  bankInstitutionNumber!: BankInstitution;
+
+  @Field({ start: 24, end: 28, pad: '0', align: 'right' })
+  bankTransitNumber!: BankTransit;
+
+  @Field({ start: 29, end: 40, pad: ' ', align: 'left' })
+  bankAccountNumber!: BankAccount;
+
+  @Field({ start: 41, end: 65, pad: '0', align: 'right' })
+  segmentFillerZeros = '';
+
+  @Field({
+    start: 66,
+    end: 80,
+    pad: ' ',
+    align: 'left',
+    transform: (v) => sanitizeCPA005Text(v as string)
+  })
+  originatorShortName!: string;
+
+  @Field({
+    start: 81,
+    end: 110,
+    pad: ' ',
+    align: 'left',
+    transform: (v) => sanitizeCPA005Text(v as string)
+  })
+  payeeName!: string;
+
+  @Field({
+    start: 111,
+    end: 140,
+    pad: ' ',
+    align: 'left',
+    transform: (v) => sanitizeCPA005Text(v as string)
+  })
+  originatorLongName!: string;
+
+  @Field({ start: 141, end: 150, pad: ' ', align: 'left' })
+  segmentFillerBlanks = '';
+
+  @Field({
+    start: 151,
+    end: 169,
+    pad: ' ',
+    align: 'left',
+    transform: (raw, instance) => {
+      const seg = instance as Segment;
+      const value =
+        (raw as string | undefined) ??
+        defaultCrossRef(seg.fileCreationNumber, seg.recordNumber, seg.segmentIndex);
+      return sanitizeCPA005Text(value);
+    }
+  })
+  crossReferenceNumber: string | undefined;
+
+  @Field({ start: 170, end: 170, pad: '0', align: 'right' })
+  returnInstitutionalIdLead = '';
+
+  // Return routing fields render as blanks when omitted. The transform
+  // returns the already-formatted blank value so normal field padding
+  // preserves the CPA-005 layout.
+  @Field({
+    start: 171,
+    end: 173,
+    pad: '0',
+    align: 'right',
+    transform: (v) => (v as string | undefined) ?? blank(3)
+  })
+  returnInstitutionNumber: BankInstitution | undefined;
+
+  @Field({
+    start: 174,
+    end: 178,
+    pad: '0',
+    align: 'right',
+    transform: (v) => (v as string | undefined) ?? blank(5)
+  })
+  returnTransitNumber: BankTransit | undefined;
+
+  @Field({
+    start: 179,
+    end: 190,
+    pad: ' ',
+    align: 'left',
+    transform: (v) => (v as string | undefined) ?? ''
+  })
+  returnAccountNumber: BankAccount | undefined;
+
+  @Field({
+    start: 191,
+    end: 240,
+    pad: ' ',
+    align: 'left',
+    transform: (_raw, instance) => {
+      const seg = instance as Segment;
+      return seg.recordType === TRANSACTION_TYPE.DEBIT
+        ? zero(33) + blank(6) + zero(11)
+        : blank(39) + zero(11);
+    }
+  })
+  trailingFiller = '';
+
+  constructor(
+    builder: EFTFileBuilder,
+    seg: EFTTransactionSegment,
+    recordType: TransactionType,
+    recordNumber: number,
+    segmentIndex: number
+  ) {
+    this.#builder = builder;
+    const cfg = builder.getConfiguration();
+
+    this.cpaCode = seg.cpaCode;
+    this.amount = seg.amount;
+    this.paymentDate = seg.paymentDate;
+    this.bankInstitutionNumber = seg.bankInstitutionNumber;
+    this.bankTransitNumber = seg.bankTransitNumber;
+    this.bankAccountNumber = seg.bankAccountNumber;
+    this.payeeName = seg.payeeName;
+    this.crossReferenceNumber = seg.crossReferenceNumber;
+
+    this.recordType = recordType;
+    this.recordNumber = recordNumber;
+    this.segmentIndex = segmentIndex;
+    this.fileCreationNumber = cfg.fileCreationNumber;
+    this.originatorShortName = cfg.originatorShortName;
+    this.originatorLongName = cfg.originatorLongName;
+    this.returnInstitutionNumber = cfg.returnInstitutionNumber;
+    this.returnTransitNumber = cfg.returnTransitNumber;
+    this.returnAccountNumber = cfg.returnAccountNumber;
+  }
+
+  print(): string {
+    return assertRecordLength(renderFields(this, Segment), 'segment', SEGMENT_LENGTH);
+  }
+
+  log(): void {
+    const tagColor = this.recordType === TRANSACTION_TYPE.CREDIT ? 'green' : 'red';
+    const paymentJulianDate = formatField(this, Segment, 'paymentDate');
+    const dayOfYear = paymentJulianDate.slice(3);
+    const xref = formatField(this, Segment, 'crossReferenceNumber');
+    const payee = formatField(this, Segment, 'payeeName');
+    const bank = `${this.bankInstitutionNumber}-${this.bankTransitNumber}-${this.bankAccountNumber}`;
+
+    const idx = `${this.recordType} ${this.recordNumber.toString().padStart(3, '0')}.${(this.segmentIndex + 1).toString()}`;
+    const xrefStr = xref.padEnd(22);
+    const payeeStr = payee.padEnd(32);
+    const amountStr = Logger.fmtCurrency(this.amount).padStart(12);
+    const dateStr = `${Logger.isoDate(this.paymentDate)} (${dayOfYear})`.padEnd(18);
+    const bankStr = bank.padEnd(22);
+    const cpa = `cpa ${this.cpaCode}`;
+
+    Logger.printf(
+      `  <b><${tagColor}>${idx.padEnd(11)}</${tagColor}></b>` +
+        `<cyan>${xrefStr}</cyan>` +
+        `<b>${payeeStr}</b>` +
+        `<yellow>${amountStr}</yellow>` +
+        `   <dim>${dateStr}</dim>` +
+        `<dim>${bankStr}</dim>` +
+        `<dim>${cpa}</dim>`
+    );
+
+    if (containsProhibitedCharacters(this.payeeName)) {
+      console.warn(
+        Logger.format(
+          `<yellow>  ⚠  payeeName contains prohibited characters and will be sanitized: ${this.payeeName}</yellow>`
+        )
+      );
+    }
+  }
+
+  /**
+   * Validates segment-level invariants. Cross-segment uniqueness of
+   * crossReferenceNumber is checked at the file level by EFTFileValidator
+   * (it spans all segments across all transactions).
+   *
+   * Note: prohibited characters in payeeName are intentionally tolerated
+   * here — the warning is emitted by log() at write time. Real-world
+   * payee names commonly contain hyphens and apostrophes.
+   */
+  validate(): void {
+    const cfg = this.#builder.getConfiguration();
+    const fileCreationDate = cfg.fileCreationDate ?? new Date();
+
+    if (this.amount <= 0) {
+      throw new Error(
+        `Segment ${String(this.segmentIndex)} amount must be positive: ${String(this.amount)}`
+      );
+    }
+    if (this.amount >= MAX_TRANSACTION_AMOUNT) {
+      throw new Error(
+        `Segment ${String(this.segmentIndex)} amount exceeds ${String(MAX_TRANSACTION_AMOUNT)}: ${String(this.amount)}`
+      );
+    }
+
+    if (this.payeeName.length > FIELD_WIDTHS.payeeName) {
+      throw new Error(
+        `payeeName exceeds ${String(FIELD_WIDTHS.payeeName)} characters: ${this.payeeName}`
+      );
+    }
+
+    if (this.crossReferenceNumber !== undefined) {
+      if (this.crossReferenceNumber.length > FIELD_WIDTHS.crossReference) {
+        throw new Error(
+          `crossReferenceNumber exceeds ${String(FIELD_WIDTHS.crossReference)} characters: ${this.crossReferenceNumber}`
+        );
+      }
+      if (containsProhibitedCharacters(this.crossReferenceNumber)) {
+        throw new Error(
+          `crossReferenceNumber contains prohibited characters: ${this.crossReferenceNumber}`
+        );
+      }
+    }
+
+    const offsetMs = this.paymentDate.getTime() - fileCreationDate.getTime();
+    if (Math.abs(offsetMs) > MAX_PAYMENT_DATE_OFFSET_MS) {
+      throw new Error(
+        `Segment ${String(this.segmentIndex)} paymentDate is more than ${String(MAX_PAYMENT_DATE_OFFSET_DAYS)} days from fileCreationDate: ${this.paymentDate.toISOString()}`
+      );
+    }
+  }
+}

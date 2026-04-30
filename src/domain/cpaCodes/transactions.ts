@@ -1,8 +1,8 @@
-import { cpaTransactionCodesCommercial } from '#cpaCodes/transactions/commercial';
-import { cpaTransactionCodesFederal } from '#cpaCodes/transactions/federal';
-import { cpaTransactionCodesPreauthorized } from '#cpaCodes/transactions/preauthorized';
-import { cpaTransactionCodesProvincialLocal } from '#cpaCodes/transactions/provincialLocal';
-import type { CPACode, CPACodeNumber } from '#types';
+import { cpaTransactionCodesCommercial } from '#domain/cpaCodes/transactions/commercial';
+import { cpaTransactionCodesFederal } from '#domain/cpaCodes/transactions/federal';
+import { cpaTransactionCodesPreauthorized } from '#domain/cpaCodes/transactions/preauthorized';
+import { cpaTransactionCodesProvincialLocal } from '#domain/cpaCodes/transactions/provincialLocal';
+import type { CPACode, CPACodeNumber } from '#domain/types';
 
 const cpaTransactionCodes = {
   ...cpaTransactionCodesPreauthorized,

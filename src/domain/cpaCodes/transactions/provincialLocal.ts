@@ -1,4 +1,4 @@
-import type { CPACode, CPACodeNumber } from '#types';
+import type { CPACode, CPACodeNumber } from '#domain/types';
 
 export const cpaTransactionCodesProvincialLocal = {
   600: {

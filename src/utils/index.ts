@@ -30,11 +30,7 @@ export function sanitizeCPA005Text(input: string): string {
  * width so calculation bugs surface at the offending field instead of
  * silently truncating or producing an oversized record.
  */
-export function fixedField(
-  value: string,
-  width: number,
-  opts: FixedFieldOpts
-): string {
+export function fixedField(value: string, width: number, opts: FixedFieldOpts): string {
   if (value.length > width) {
     throw new Error(
       `CPA-005 field overflow: value of length ${String(value.length)} exceeds width ${String(width)} (value: "${value}")`

@@ -1,6 +1,6 @@
 {
   "name": "@rationalthinker1/eft-generator",
-  "version": "6.0.0",
+  "version": "7.0.0",
   "description": "Formats Electronic Funds Transfer (EFT) data into the CPA 005 standard.",
   "keywords": [
     "banking",
@@ -27,6 +27,142 @@
     ".": "./build/index.js"
   },
   "imports": {
+    "#BankPADInformation": {
+      "development": {
+        "types": "./src/domain/BankPADInformation.ts",
+        "default": "./build/domain/BankPADInformation.js"
+      },
+      "types": "./build/domain/BankPADInformation.d.ts",
+      "default": "./build/domain/BankPADInformation.js"
+    },
+    "#cpaCodes/*": {
+      "development": {
+        "types": "./src/domain/cpaCodes/*.ts",
+        "default": "./build/domain/cpaCodes/*.js"
+      },
+      "types": "./build/domain/cpaCodes/*.d.ts",
+      "default": "./build/domain/cpaCodes/*.js"
+    },
+    "#EFTFileBuilder": {
+      "development": {
+        "types": "./src/EFTFileBuilder.ts",
+        "default": "./build/EFTFileBuilder.js"
+      },
+      "types": "./build/EFTFileBuilder.d.ts",
+      "default": "./build/EFTFileBuilder.js"
+    },
+    "#EFTFileGenerator": {
+      "development": {
+        "types": "./src/EFTFileGenerator.ts",
+        "default": "./build/EFTFileGenerator.js"
+      },
+      "types": "./build/EFTFileGenerator.d.ts",
+      "default": "./build/EFTFileGenerator.js"
+    },
+    "#EFTFileValidator": {
+      "development": {
+        "types": "./src/EFTFileValidator.ts",
+        "default": "./build/EFTFileValidator.js"
+      },
+      "types": "./build/EFTFileValidator.d.ts",
+      "default": "./build/EFTFileValidator.js"
+    },
+    "#Field": {
+      "development": {
+        "types": "./src/records/Field.ts",
+        "default": "./build/records/Field.js"
+      },
+      "types": "./build/records/Field.d.ts",
+      "default": "./build/records/Field.js"
+    },
+    "#Header": {
+      "development": {
+        "types": "./src/records/Header.ts",
+        "default": "./build/records/Header.js"
+      },
+      "types": "./build/records/Header.d.ts",
+      "default": "./build/records/Header.js"
+    },
+    "#Loggable": {
+      "development": {
+        "types": "./src/contracts/Loggable.ts",
+        "default": "./build/contracts/Loggable.js"
+      },
+      "types": "./build/contracts/Loggable.d.ts",
+      "default": "./build/contracts/Loggable.js"
+    },
+    "#Logger": {
+      "development": {
+        "types": "./src/utils/Logger.ts",
+        "default": "./build/utils/Logger.js"
+      },
+      "types": "./build/utils/Logger.d.ts",
+      "default": "./build/utils/Logger.js"
+    },
+    "#Printable": {
+      "development": {
+        "types": "./src/contracts/Printable.ts",
+        "default": "./build/contracts/Printable.js"
+      },
+      "types": "./build/contracts/Printable.d.ts",
+      "default": "./build/contracts/Printable.js"
+    },
+    "#Segment": {
+      "development": {
+        "types": "./src/records/Segment.ts",
+        "default": "./build/records/Segment.js"
+      },
+      "types": "./build/records/Segment.d.ts",
+      "default": "./build/records/Segment.js"
+    },
+    "#Trailer": {
+      "development": {
+        "types": "./src/records/Trailer.ts",
+        "default": "./build/records/Trailer.js"
+      },
+      "types": "./build/records/Trailer.d.ts",
+      "default": "./build/records/Trailer.js"
+    },
+    "#Transaction": {
+      "development": {
+        "types": "./src/records/Transaction.ts",
+        "default": "./build/records/Transaction.js"
+      },
+      "types": "./build/records/Transaction.d.ts",
+      "default": "./build/records/Transaction.js"
+    },
+    "#Validable": {
+      "development": {
+        "types": "./src/contracts/Validable.ts",
+        "default": "./build/contracts/Validable.js"
+      },
+      "types": "./build/contracts/Validable.d.ts",
+      "default": "./build/contracts/Validable.js"
+    },
+    "#spec": {
+      "development": {
+        "types": "./src/domain/spec.ts",
+        "default": "./build/domain/spec.js"
+      },
+      "types": "./build/domain/spec.d.ts",
+      "default": "./build/domain/spec.js"
+    },
+    "#types": {
+      "development": {
+        "types": "./src/domain/types.ts",
+        "default": "./build/domain/types.js"
+      },
+      "types": "./build/domain/types.d.ts",
+      "default": "./build/domain/types.js"
+    },
+    "#utils": {
+      "development": {
+        "types": "./src/utils/index.ts",
+        "default": "./build/utils/index.js"
+      },
+      "types": "./build/utils/index.d.ts",
+      "default": "./build/utils/index.js"
+    },
     "#*": {
       "development": {
         "types": "./src/*.ts",
@@ -38,14 +174,13 @@
   },
   "files": [
     "build/index.*",
-    "build/types.*",
-    "build/BankPADInformation.*",
+    "build/contracts/",
     "build/EFTFileBuilder.*",
-    "build/EFTFileValidator.*",
     "build/EFTFileGenerator.*",
-    "build/EFTFileLogger.*",
-    "build/utils.*",
-    "build/cpaCodes/"
+    "build/EFTFileValidator.*",
+    "build/domain/",
+    "build/records/",
+    "build/utils/"
   ],
   "scripts": {
     "build": "tsc",
@@ -58,7 +193,9 @@
     "coverage": "yarn build && yarn build:tests && c8 --reporter=lcov --reporter=text --reporter=text-summary node --test \"build/tests/**/*.js\"",
     "test": "yarn build && yarn build:tests && node --test \"build/tests/**/*.js\""
   },
-  "dependencies": {},
+  "dependencies": {
+    "reflect-metadata": "^0.2.2"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@stylistic/eslint-plugin": "^5.10.0",

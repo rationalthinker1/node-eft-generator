@@ -3,9 +3,9 @@ import fs from 'node:fs';
 import { describe, it, mock } from 'node:test';
 
 import { BankPADInformation, EFTFileBuilder, EFTFileValidator } from '#index';
-import { RECORD_TYPE, TRANSACTION_TYPE, type EFTConfiguration } from '#types';
-import type { CPATransactionCode } from '#cpaCodes/transactions';
-import { NEWLINE as cpa005_newline } from '#utils';
+import { RECORD_TYPE, TRANSACTION_TYPE, type EFTConfiguration } from '#domain/types';
+import type { CPATransactionCode } from '#domain/cpaCodes/transactions';
+import { NEWLINE as cpa005_newline } from '#utils/index';
 
 const { bankAccount, bankInstitution, bankTransit } = BankPADInformation;
 
@@ -154,7 +154,6 @@ await describe('eft-generator - CPA-005', async () => {
         eftGenerator.validate();
       });
     });
-
   });
 
   await describe('Brand constructors', async () => {
@@ -471,27 +470,24 @@ await describe('eft-generator - CPA-005', async () => {
 
     await it('C record field 13 (positions 165-174) is 10 blanks (spec page 60)', () => {
       const lines = buildSampleOutput().split('\r');
-      const cRecord = lines.find((line) =>
-        line.startsWith(RECORD_TYPE.TRANSACTION_CREDIT)
-      ) ?? '';
+      const cRecord =
+        lines.find((line) => line.startsWith(RECORD_TYPE.TRANSACTION_CREDIT)) ?? '';
       assert.ok(cRecord, 'expected at least one C record');
       assert.strictEqual(cRecord.slice(164, 174), ' '.repeat(10));
     });
 
     await it('D record field 13 (positions 165-174) is 10 blanks (spec page 63)', () => {
       const lines = buildSampleOutput().split('\r');
-      const dRecord = lines.find((line) =>
-        line.startsWith(RECORD_TYPE.TRANSACTION_DEBIT)
-      ) ?? '';
+      const dRecord =
+        lines.find((line) => line.startsWith(RECORD_TYPE.TRANSACTION_DEBIT)) ?? '';
       assert.ok(dRecord, 'expected at least one D record');
       assert.strictEqual(dRecord.slice(164, 174), ' '.repeat(10));
     });
 
     await it('D record positions 215-247 are 33 zeros (spec page 64)', () => {
       const lines = buildSampleOutput().split('\r');
-      const dRecord = lines.find((line) =>
-        line.startsWith(RECORD_TYPE.TRANSACTION_DEBIT)
-      ) ?? '';
+      const dRecord =
+        lines.find((line) => line.startsWith(RECORD_TYPE.TRANSACTION_DEBIT)) ?? '';
       assert.ok(dRecord);
       assert.strictEqual(dRecord.slice(214, 247), '0'.repeat(33));
     });

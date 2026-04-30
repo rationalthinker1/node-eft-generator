@@ -5,7 +5,7 @@ import {
   type EFTConfiguration,
   type EFTTransaction,
   type EFTTransactionSegment
-} from '#types';
+} from '#domain/types';
 
 export class EFTFileBuilder {
   readonly #config: EFTConfiguration;
