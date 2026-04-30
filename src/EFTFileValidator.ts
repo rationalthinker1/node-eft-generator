@@ -25,10 +25,17 @@ const MINIMUM_RECORD_COUNT = 3;
 /**
  * Validates an `EFTFileBuilder` against the CPA-005 specification.
  *
- * Throws on every spec violation. There are no warnings — callers must
- * supply input that already conforms to the spec. The validator is run
- * automatically by `EFTFileGenerator.generate()`, so any throw aborts
- * file generation before any record is emitted.
+ * Throws on every spec violation, with one exception: prohibited
+ * characters in `payeeName` emit a `console.warn` instead of throwing.
+ * Payee names are third-party data and routinely contain spec-prohibited
+ * characters (hyphens in 'GOLDSTEIN-KRUPSKI', apostrophes in 'O'BRIEN',
+ * etc.); the sanitizer cleans those at write time so the output stays
+ * compliant. All other fields (including originatorId, the originator
+ * names, and crossReferenceNumber) still throw — they are
+ * caller-controlled and bad input there is a configuration bug.
+ *
+ * The validator is run automatically by `EFTFileGenerator.generate()`,
+ * so any throw aborts file generation before any record is emitted.
  */
 export class EFTFileValidator {
   readonly #builder: EFTFileBuilder;
@@ -271,8 +278,8 @@ export class EFTFileValidator {
           );
         }
         if (containsProhibitedCharacters(segment.payeeName)) {
-          throw new Error(
-            `payeeName contains prohibited characters: ${segment.payeeName}`
+          console.warn(
+            `payeeName contains prohibited characters and will be sanitized: ${segment.payeeName}`
           );
         }
 

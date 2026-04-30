@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import fs from 'node:fs';
-import { describe, it } from 'node:test';
+import { describe, it, mock } from 'node:test';
 
 import { BankPADInformation, EFTFileBuilder, EFTFileValidator } from '#index';
 import { RECORD_TYPE, TRANSACTION_TYPE, type EFTConfiguration } from '#types';
@@ -414,18 +414,35 @@ await describe('eft-generator - CPA-005', async () => {
       );
     });
 
-    await it('throws when payeeName contains prohibited characters (spec page 59)', () => {
+    await it('warns and sanitizes when payeeName contains prohibited characters (spec page 59)', () => {
+      // Real-world payee names commonly contain hyphens and apostrophes
+      // that the spec prohibits; payeeName is the only field that warns
+      // rather than throws. See EFTFileValidator class doc.
       const eftGenerator = new EFTFileBuilder(config);
       eftGenerator.addDebitTransaction({
         ...validBank,
         cpaCode: cpaCodePropertyTaxes,
         amount: 100,
-        payeeName: 'Smith & Co. (Inc.)'
+        payeeName: 'ELISSA GOLDSTEIN-KRUPSKI'
       });
-      assert.throws(
-        () => new EFTFileValidator(eftGenerator).validate(),
-        /payeeName contains prohibited characters/
+
+      const warnings: string[] = [];
+      const warnSpy = mock.method(console, 'warn', (...args: unknown[]) => {
+        warnings.push(args.map(String).join(' '));
+      });
+
+      let output = '';
+      try {
+        output = eftGenerator.generate();
+      } finally {
+        warnSpy.mock.restore();
+      }
+
+      assert.ok(
+        warnings.some((w) => /payeeName contains prohibited characters/.test(w)),
+        `expected warning, got ${JSON.stringify(warnings)}`
       );
+      assert.match(output, /^[0-9A-Z =_$.&*,\r]*$/);
     });
 
     await it('throws when crossReferenceNumber contains prohibited characters (spec page 59)', () => {
