@@ -158,8 +158,9 @@ await describe('eft-generator - CPA-005', async () => {
     await it('throws when returnInstitutionNumber is too long', () => {
       const eftGenerator = new EFTFileBuilder({
         ...config,
-        returnInstitutionNumber:
-          '0003' as NonNullable<typeof config.returnInstitutionNumber>
+        returnInstitutionNumber: '0003' as NonNullable<
+          typeof config.returnInstitutionNumber
+        >
       });
       eftGenerator.addDebitTransaction({
         ...validBank,
@@ -191,8 +192,9 @@ await describe('eft-generator - CPA-005', async () => {
     await it('throws when returnAccountNumber is too long', () => {
       const eftGenerator = new EFTFileBuilder({
         ...config,
-        returnAccountNumber:
-          '1234567890123' as NonNullable<typeof config.returnAccountNumber>
+        returnAccountNumber: '1234567890123' as NonNullable<
+          typeof config.returnAccountNumber
+        >
       });
       eftGenerator.addDebitTransaction({
         ...validBank,
