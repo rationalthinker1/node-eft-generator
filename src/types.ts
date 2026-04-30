@@ -10,7 +10,7 @@ export interface EFTConfiguration {
    */
   originatorId: string;
 
-  originatorShortName?: string;
+  originatorShortName: string;
   originatorLongName: string;
 
   /**
@@ -52,7 +52,6 @@ export const RECORD_TYPE = {
   TRANSACTION_DEBIT: 'D',
   TRAILER: 'Z'
 } as const;
-export type RecordType = (typeof RECORD_TYPE)[keyof typeof RECORD_TYPE]; // 'A' | 'C' | 'D' | 'Z'
 
 export interface EFTTransaction {
   /**
@@ -72,10 +71,7 @@ export interface EFTTransactionSegment {
    */
   amount: number;
 
-  /**
-   * If not set, will use today.
-   */
-  paymentDate?: Date;
+  paymentDate: Date;
 
   bankInstitutionNumber: BankInstitution;
   bankTransitNumber: BankTransit;
@@ -85,23 +81,6 @@ export interface EFTTransactionSegment {
 
   crossReferenceNumber?: string;
 }
-
-export type ValidationWarning = {
-  warning: string;
-} & (
-  | {
-      warningField: keyof EFTConfiguration | 'transactions';
-    }
-  | {
-      transactionIndex: number;
-      warningField: keyof EFTTransaction;
-    }
-  | {
-      transactionIndex: number;
-      transactionSegmentIndex: number;
-      warningField: keyof EFTTransactionSegment;
-    }
-);
 
 export type CPACodeNumber = number;
 

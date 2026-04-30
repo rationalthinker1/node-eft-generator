@@ -27,7 +27,8 @@ const cpaCodePropertyTaxes: CPATransactionCode = '385';
 const validBank = {
   bankInstitutionNumber: bankInstitution('003'),
   bankTransitNumber: bankTransit('22222'),
-  bankAccountNumber: bankAccount('333333333')
+  bankAccountNumber: bankAccount('333333333'),
+  paymentDate: new Date()
 };
 
 await describe('eft-generator - CPA-005', async () => {
@@ -51,7 +52,8 @@ await describe('eft-generator - CPA-005', async () => {
           bankAccountNumber: bankAccount('4444444444'),
           cpaCode: cpaCodePropertyTaxes,
           amount: 2345.67,
-          payeeName: 'Test Property Owner 2'
+          payeeName: 'Test Property Owner 2',
+          paymentDate: new Date()
         }
       ]
     });
@@ -73,7 +75,8 @@ await describe('eft-generator - CPA-005', async () => {
           bankAccountNumber: bankAccount('4444444444'),
           cpaCode: cpaCodePropertyTaxes,
           amount: 2345.67,
-          payeeName: 'Test Property Owner 2'
+          payeeName: 'Test Property Owner 2',
+          paymentDate: new Date()
         }
       ]
     });
@@ -152,19 +155,6 @@ await describe('eft-generator - CPA-005', async () => {
       });
     });
 
-    await it('throws when originatorShortName is missing', () => {
-      const eftGenerator = new EFTFileBuilder({
-        originatorId: '01',
-        originatorLongName:
-          'This name exceeds the 30 character limit and will be truncated.',
-        fileCreationNumber: '0001',
-        destinationDataCentre: '123'
-      });
-      assert.throws(
-        () => new EFTFileValidator(eftGenerator).validate(),
-        /originatorShortName is required/
-      );
-    });
   });
 
   await describe('Brand constructors', async () => {

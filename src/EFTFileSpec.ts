@@ -18,39 +18,18 @@ export class EFTFileSpec {
   static readonly MAX_TRANSACTION_AMOUNT = 100_000_000;
   static readonly MAX_FILE_TRANSACTION_COUNT = 999_999_999;
 
+  /**
+   * Maximum widths for the alphanumeric fields the validator length-checks.
+   * The generator no longer reads from this — field widths are derived
+   * from each field's `start`/`end` positions in `EFTFileGenerator`.
+   */
   static readonly FIELD_WIDTHS = {
-    recordType: 1,
-    logicalRecordCount: 9,
     originatorId: 10,
-    fileCreationNumber: 4,
-    creationDate: 6,
-    dataCentre: 5,
-    reservedHeader: 20,
-    currency: 3,
-    headerFiller: 1406,
-
-    cpaCode: 3,
-    amount: 10,
-    paymentDate: 6,
-    institutionalIdLead: 1,
-    institutionNumber: 3,
-    transitNumber: 5,
-    accountNumber: 12,
-    segmentFillerZeros: 25,
     originatorShortName: 15,
-    payeeName: 30,
     originatorLongName: 30,
-    segmentFillerBlanks: 10,
-    crossReference: 19,
-
-    totalValueDebits: 14,
-    totalNumberDebits: 8,
-    totalValueCredits: 14,
-    totalNumberCredits: 8,
-    trailerFiller: 1396
+    payeeName: 30,
+    crossReference: 19
   } as const;
-
-  static readonly ALLOWED_CHAR_PATTERN = /^[0-9A-Z =_$.&*,\r]*$/;
 
   /**
    * Pad a value to a fixed width. Throws if the value already exceeds the

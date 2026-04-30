@@ -178,10 +178,6 @@ export class EFTFileValidator {
       );
     }
 
-    if (eftConfig.originatorShortName === undefined) {
-      throw new Error('originatorShortName is required.');
-    }
-
     if (
       eftConfig.originatorShortName.length > EFTFileSpec.FIELD_WIDTHS.originatorShortName
     ) {
@@ -304,13 +300,11 @@ export class EFTFileValidator {
           crossReferenceNumbers.add(segment.crossReferenceNumber);
         }
 
-        if (segment.paymentDate !== undefined) {
-          const offsetMs = segment.paymentDate.getTime() - fileCreationDate.getTime();
-          if (Math.abs(offsetMs) > MAX_PAYMENT_DATE_OFFSET_MS) {
-            throw new Error(
-              `Segment ${String(segmentIndex)} paymentDate is more than ${String(MAX_PAYMENT_DATE_OFFSET_DAYS)} days from fileCreationDate: ${segment.paymentDate.toISOString()}`
-            );
-          }
+        const offsetMs = segment.paymentDate.getTime() - fileCreationDate.getTime();
+        if (Math.abs(offsetMs) > MAX_PAYMENT_DATE_OFFSET_MS) {
+          throw new Error(
+            `Segment ${String(segmentIndex)} paymentDate is more than ${String(MAX_PAYMENT_DATE_OFFSET_DAYS)} days from fileCreationDate: ${segment.paymentDate.toISOString()}`
+          );
         }
       }
     }
