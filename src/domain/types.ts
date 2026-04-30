@@ -3,7 +3,7 @@ import type {
   BankInstitution,
   BankTransit
 } from '#domain/BankPADInformation';
-import type { CPATransactionCode } from '#domain/cpaCodes/transactions';
+import type { CPATransactionCode } from '#domain/CPACodes';
 
 export interface EFTConfiguration {
   /**
@@ -92,4 +92,25 @@ export interface CPACode {
   cpaCodeFullName: string;
   cpaCodeAbbreviationEnglish: string;
   cpaCodeAbbreviationFrench: string;
+}
+
+/**
+ * A record that can log itself to the console during file generation.
+ */
+export interface Loggable {
+  log(): void;
+}
+
+/**
+ * A record that can render itself to its CPA-005 fixed-width string form.
+ */
+export interface Printable {
+  print(): string;
+}
+
+/**
+ * A record that can validate its own CPA-005 invariants.
+ */
+export interface Validable {
+  validate(): void;
 }

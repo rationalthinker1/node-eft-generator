@@ -3,24 +3,18 @@ import type {
   BankInstitution,
   BankTransit
 } from '#domain/BankPADInformation';
-import type { CPATransactionCode } from '#domain/cpaCodes/transactions';
+import type { CPATransactionCode } from '#domain/CPACodes';
 import type { EFTFileBuilder } from '#EFTFileBuilder';
-import {
-  FIELD_WIDTHS,
-  MAX_PAYMENT_DATE_OFFSET_DAYS,
-  MAX_PAYMENT_DATE_OFFSET_MS,
-  MAX_TRANSACTION_AMOUNT
-} from '#domain/spec';
 import { Field, formatField, renderFields } from '#records/Field';
-import type { Loggable } from '#contracts/Loggable';
 import { Logger } from '#utils/Logger';
-import type { Printable } from '#contracts/Printable';
 import {
   TRANSACTION_TYPE,
   type EFTTransactionSegment,
+  type Loggable,
+  type Printable,
+  type Validable,
   type TransactionType
 } from '#domain/types';
-import type { Validable } from '#contracts/Validable';
 import {
   assertRecordLength,
   containsProhibitedCharacters,
@@ -29,6 +23,16 @@ import {
 } from '#utils/index';
 
 const SEGMENT_LENGTH = 240;
+const MS_PER_DAY = 86_400_000;
+
+export const MAX_TRANSACTION_AMOUNT = 100_000_000;
+export const MAX_PAYMENT_DATE_OFFSET_DAYS = 173;
+const MAX_PAYMENT_DATE_OFFSET_MS = MAX_PAYMENT_DATE_OFFSET_DAYS * MS_PER_DAY;
+
+export const SEGMENT_FIELD_WIDTHS = {
+  payeeName: 30,
+  crossReference: 19
+} as const;
 
 const blank = (n: number): string => ' '.repeat(n);
 const zero = (n: number): string => '0'.repeat(n);
@@ -286,16 +290,16 @@ export class Segment implements Printable, Loggable, Validable {
       );
     }
 
-    if (this.payeeName.length > FIELD_WIDTHS.payeeName) {
+    if (this.payeeName.length > SEGMENT_FIELD_WIDTHS.payeeName) {
       throw new Error(
-        `payeeName exceeds ${String(FIELD_WIDTHS.payeeName)} characters: ${this.payeeName}`
+        `payeeName exceeds ${String(SEGMENT_FIELD_WIDTHS.payeeName)} characters: ${this.payeeName}`
       );
     }
 
     if (this.crossReferenceNumber !== undefined) {
-      if (this.crossReferenceNumber.length > FIELD_WIDTHS.crossReference) {
+      if (this.crossReferenceNumber.length > SEGMENT_FIELD_WIDTHS.crossReference) {
         throw new Error(
-          `crossReferenceNumber exceeds ${String(FIELD_WIDTHS.crossReference)} characters: ${this.crossReferenceNumber}`
+          `crossReferenceNumber exceeds ${String(SEGMENT_FIELD_WIDTHS.crossReference)} characters: ${this.crossReferenceNumber}`
         );
       }
       if (containsProhibitedCharacters(this.crossReferenceNumber)) {

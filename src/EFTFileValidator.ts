@@ -1,10 +1,12 @@
 import type { EFTFileBuilder } from '#EFTFileBuilder';
 import { Header } from '#records/Header';
-import { MAX_FILE_TRANSACTION_COUNT, RECORD_LENGTH } from '#domain/spec';
 import { Trailer } from '#records/Trailer';
 import { Transaction } from '#records/Transaction';
 import { RECORD_TYPE } from '#domain/types';
 import { NEWLINE } from '#utils/index';
+
+export const RECORD_LENGTH = 1464;
+export const MAX_FILE_TRANSACTION_COUNT = 999_999_999;
 
 const PROHIBITED_OUTPUT_CHAR_PATTERN = /[^0-9A-Z =_$.&*,]/;
 
@@ -36,7 +38,7 @@ const MINIMUM_RECORD_COUNT = 3;
  * `console.warn` is emitted by `Segment.log` so it stays next to the
  * transaction it describes.
  *
- * The validator is run automatically by `EFTFileGenerator.generate()`,
+ * The validator is run automatically by `EFTFileBuilder.generate()`,
  * so any throw aborts file generation before any record is emitted.
  */
 export class EFTFileValidator {

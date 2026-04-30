@@ -1,16 +1,14 @@
 export { EFTFileBuilder } from '#EFTFileBuilder';
-export { EFTFileValidator } from '#EFTFileValidator';
 export {
-  FIELD_WIDTHS,
+  EFTFileValidator,
   MAX_FILE_TRANSACTION_COUNT,
-  MAX_SEGMENTS_PER_RECORD,
-  MAX_TRANSACTION_AMOUNT,
   RECORD_LENGTH
-} from '#domain/spec';
+} from '#EFTFileValidator';
+import { HEADER_FIELD_WIDTHS } from '#records/Header';
+import { SEGMENT_FIELD_WIDTHS } from '#records/Segment';
+export { MAX_SEGMENTS_PER_RECORD } from '#records/Transaction';
+export { MAX_TRANSACTION_AMOUNT } from '#records/Segment';
 export { Logger } from '#utils/Logger';
-export type { Loggable } from '#contracts/Loggable';
-export type { Printable } from '#contracts/Printable';
-export type { Validable } from '#contracts/Validable';
 export { Header } from '#records/Header';
 export { Segment } from '#records/Segment';
 export { Transaction } from '#records/Transaction';
@@ -21,6 +19,12 @@ export type {
   BankInstitution,
   BankTransit
 } from '#domain/BankPADInformation';
-export { CPATransactionCodes } from '#domain/cpaCodes/transactions';
-export type { CPATransactionCode } from '#domain/cpaCodes/transactions';
+export { CPATransactionCodes } from '#domain/CPACodes';
+export type { CPATransactionCode } from '#domain/CPACodes';
+export type { Loggable, Printable, Validable } from '#domain/types';
 export type * as types from '#domain/types';
+
+export const FIELD_WIDTHS = {
+  ...HEADER_FIELD_WIDTHS,
+  ...SEGMENT_FIELD_WIDTHS
+} as const;

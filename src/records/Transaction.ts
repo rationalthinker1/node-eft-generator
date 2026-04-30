@@ -1,16 +1,18 @@
 import type { EFTFileBuilder } from '#EFTFileBuilder';
-import { MAX_SEGMENTS_PER_RECORD, RECORD_LENGTH } from '#domain/spec';
 import { Field, renderFields } from '#records/Field';
-import type { Loggable } from '#contracts/Loggable';
-import type { Printable } from '#contracts/Printable';
 import { Segment } from '#records/Segment';
 import {
   TRANSACTION_TYPE,
   type EFTTransaction,
+  type Loggable,
+  type Printable,
+  type Validable,
   type TransactionType
 } from '#domain/types';
-import type { Validable } from '#contracts/Validable';
 import { assertRecordLength, sanitizeCPA005Text } from '#utils/index';
+
+const RECORD_LENGTH = 1464;
+export const MAX_SEGMENTS_PER_RECORD = 6;
 
 /**
  * One CPA-005 transaction record (1464 chars). Holds a 24-char prefix

@@ -1,23 +1,24 @@
 import { EFTFileValidator } from '#EFTFileValidator';
-import { EFTFileGenerator } from '#EFTFileGenerator';
 import {
   TRANSACTION_TYPE,
   type EFTConfiguration,
   type EFTTransaction,
   type EFTTransactionSegment
 } from '#domain/types';
+import { Header } from '#records/Header';
+import { Trailer } from '#records/Trailer';
+import { Transaction } from '#records/Transaction';
+import { NEWLINE } from '#utils/index';
 
 export class EFTFileBuilder {
   readonly #config: EFTConfiguration;
   readonly #transactions: EFTTransaction[];
   readonly #validator: EFTFileValidator;
-  readonly #generator: EFTFileGenerator;
 
   constructor(config: EFTConfiguration) {
     this.#config = config;
     this.#transactions = [];
     this.#validator = new EFTFileValidator(this);
-    this.#generator = new EFTFileGenerator(this);
   }
 
   getConfiguration(): EFTConfiguration {
@@ -52,7 +53,19 @@ export class EFTFileBuilder {
    * @returns Data formatted to the CPA-005 standard.
    */
   generate(): string {
-    return this.#generator.generate();
+    this.#validator.validate();
+
+    const lines: string[] = [];
+    lines.push(new Header(this).print());
+    for (const [index, tx] of this.#transactions.entries()) {
+      const recordNumber = index + 2; // header is record 1
+      lines.push(new Transaction(this, tx, recordNumber).print());
+    }
+    lines.push(new Trailer(this).print());
+
+    const output = lines.join(NEWLINE);
+    this.#validator.validateFile(output);
+    return output;
   }
 
   /**

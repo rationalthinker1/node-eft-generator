@@ -1,6 +1,6 @@
 {
   "name": "@rationalthinker1/eft-generator",
-  "version": "7.0.0",
+  "version": "8.0.0",
   "description": "Formats Electronic Funds Transfer (EFT) data into the CPA 005 standard.",
   "keywords": [
     "banking",
@@ -26,6 +26,9 @@
   "exports": {
     ".": "./build/index.js"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "imports": {
     "#BankPADInformation": {
       "development": {
@@ -35,14 +38,6 @@
       "types": "./build/domain/BankPADInformation.d.ts",
       "default": "./build/domain/BankPADInformation.js"
     },
-    "#cpaCodes/*": {
-      "development": {
-        "types": "./src/domain/cpaCodes/*.ts",
-        "default": "./build/domain/cpaCodes/*.js"
-      },
-      "types": "./build/domain/cpaCodes/*.d.ts",
-      "default": "./build/domain/cpaCodes/*.js"
-    },
     "#EFTFileBuilder": {
       "development": {
         "types": "./src/EFTFileBuilder.ts",
@@ -50,14 +45,6 @@
       },
       "types": "./build/EFTFileBuilder.d.ts",
       "default": "./build/EFTFileBuilder.js"
-    },
-    "#EFTFileGenerator": {
-      "development": {
-        "types": "./src/EFTFileGenerator.ts",
-        "default": "./build/EFTFileGenerator.js"
-      },
-      "types": "./build/EFTFileGenerator.d.ts",
-      "default": "./build/EFTFileGenerator.js"
     },
     "#EFTFileValidator": {
       "development": {
@@ -83,14 +70,6 @@
       "types": "./build/records/Header.d.ts",
       "default": "./build/records/Header.js"
     },
-    "#Loggable": {
-      "development": {
-        "types": "./src/contracts/Loggable.ts",
-        "default": "./build/contracts/Loggable.js"
-      },
-      "types": "./build/contracts/Loggable.d.ts",
-      "default": "./build/contracts/Loggable.js"
-    },
     "#Logger": {
       "development": {
         "types": "./src/utils/Logger.ts",
@@ -98,14 +77,6 @@
       },
       "types": "./build/utils/Logger.d.ts",
       "default": "./build/utils/Logger.js"
-    },
-    "#Printable": {
-      "development": {
-        "types": "./src/contracts/Printable.ts",
-        "default": "./build/contracts/Printable.js"
-      },
-      "types": "./build/contracts/Printable.d.ts",
-      "default": "./build/contracts/Printable.js"
     },
     "#Segment": {
       "development": {
@@ -130,22 +101,6 @@
       },
       "types": "./build/records/Transaction.d.ts",
       "default": "./build/records/Transaction.js"
-    },
-    "#Validable": {
-      "development": {
-        "types": "./src/contracts/Validable.ts",
-        "default": "./build/contracts/Validable.js"
-      },
-      "types": "./build/contracts/Validable.d.ts",
-      "default": "./build/contracts/Validable.js"
-    },
-    "#spec": {
-      "development": {
-        "types": "./src/domain/spec.ts",
-        "default": "./build/domain/spec.js"
-      },
-      "types": "./build/domain/spec.d.ts",
-      "default": "./build/domain/spec.js"
     },
     "#types": {
       "development": {
@@ -174,9 +129,7 @@
   },
   "files": [
     "build/index.*",
-    "build/contracts/",
     "build/EFTFileBuilder.*",
-    "build/EFTFileGenerator.*",
     "build/EFTFileValidator.*",
     "build/domain/",
     "build/records/",

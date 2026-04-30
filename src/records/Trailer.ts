@@ -1,12 +1,16 @@
 import type { EFTFileBuilder } from '#EFTFileBuilder';
 import { Field, renderFields } from '#records/Field';
-import { RECORD_LENGTH } from '#domain/spec';
-import type { Loggable } from '#contracts/Loggable';
 import { Logger } from '#utils/Logger';
-import type { Printable } from '#contracts/Printable';
-import { RECORD_TYPE, TRANSACTION_TYPE } from '#domain/types';
-import type { Validable } from '#contracts/Validable';
+import {
+  RECORD_TYPE,
+  TRANSACTION_TYPE,
+  type Loggable,
+  type Printable,
+  type Validable
+} from '#domain/types';
 import { assertRecordLength, sanitizeCPA005Text } from '#utils/index';
+
+const RECORD_LENGTH = 1464;
 
 export class Trailer implements Printable, Loggable, Validable {
   @Field({ start: 1, end: 1, pad: '0', align: 'right' })

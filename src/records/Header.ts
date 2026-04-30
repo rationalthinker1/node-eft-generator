@@ -1,17 +1,26 @@
 import type { EFTFileBuilder } from '#EFTFileBuilder';
 import { Field, formatField, renderFields } from '#records/Field';
-import { FIELD_WIDTHS, RECORD_LENGTH } from '#domain/spec';
-import type { Loggable } from '#contracts/Loggable';
 import { Logger } from '#utils/Logger';
-import type { Printable } from '#contracts/Printable';
-import { RECORD_TYPE } from '#domain/types';
-import type { Validable } from '#contracts/Validable';
+import {
+  RECORD_TYPE,
+  type Loggable,
+  type Printable,
+  type Validable
+} from '#domain/types';
 import {
   assertRecordLength,
   containsProhibitedCharacters,
   sanitizeCPA005Text,
   toPaddedJulianDate
 } from '#utils/index';
+
+const RECORD_LENGTH = 1464;
+
+export const HEADER_FIELD_WIDTHS = {
+  originatorId: 10,
+  originatorShortName: 15,
+  originatorLongName: 30
+} as const;
 
 export class Header implements Printable, Loggable, Validable {
   readonly #builder: EFTFileBuilder;
@@ -80,9 +89,9 @@ export class Header implements Printable, Loggable, Validable {
   validate(): void {
     const cfg = this.#builder.getConfiguration();
 
-    if (cfg.originatorId.length > FIELD_WIDTHS.originatorId) {
+    if (cfg.originatorId.length > HEADER_FIELD_WIDTHS.originatorId) {
       throw new Error(
-        `originatorId length exceeds ${String(FIELD_WIDTHS.originatorId)}: ${cfg.originatorId}`
+        `originatorId length exceeds ${String(HEADER_FIELD_WIDTHS.originatorId)}: ${cfg.originatorId}`
       );
     }
     if (containsProhibitedCharacters(cfg.originatorId)) {
@@ -101,9 +110,9 @@ export class Header implements Printable, Loggable, Validable {
       );
     }
 
-    if (cfg.originatorShortName.length > FIELD_WIDTHS.originatorShortName) {
+    if (cfg.originatorShortName.length > HEADER_FIELD_WIDTHS.originatorShortName) {
       throw new Error(
-        `originatorShortName exceeds ${String(FIELD_WIDTHS.originatorShortName)} characters: ${cfg.originatorShortName}`
+        `originatorShortName exceeds ${String(HEADER_FIELD_WIDTHS.originatorShortName)} characters: ${cfg.originatorShortName}`
       );
     }
     if (containsProhibitedCharacters(cfg.originatorShortName)) {
@@ -112,9 +121,9 @@ export class Header implements Printable, Loggable, Validable {
       );
     }
 
-    if (cfg.originatorLongName.length > FIELD_WIDTHS.originatorLongName) {
+    if (cfg.originatorLongName.length > HEADER_FIELD_WIDTHS.originatorLongName) {
       throw new Error(
-        `originatorLongName exceeds ${String(FIELD_WIDTHS.originatorLongName)} characters: ${cfg.originatorLongName}`
+        `originatorLongName exceeds ${String(HEADER_FIELD_WIDTHS.originatorLongName)} characters: ${cfg.originatorLongName}`
       );
     }
     if (containsProhibitedCharacters(cfg.originatorLongName)) {
