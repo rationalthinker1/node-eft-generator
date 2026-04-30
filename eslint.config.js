@@ -4,7 +4,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['build/', 'tests/', 'eslint.config.js']
+    ignores: ['build/', 'coverage/', 'tests/', 'eslint.config.js']
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,

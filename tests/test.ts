@@ -31,6 +31,23 @@ const validBank = {
   paymentDate: new Date()
 };
 
+function captureConsoleWarn<T>(callback: () => T): { result: T; warnings: string[] } {
+  const originalWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...data: unknown[]): void => {
+    warnings.push(data.map(String).join(' '));
+  };
+
+  try {
+    return {
+      result: callback(),
+      warnings
+    };
+  } finally {
+    console.warn = originalWarn;
+  }
+}
+
 await describe('eft-generator - CPA-005', async () => {
   await it('Creates valid CPA-005 formatted output', () => {
     const eftGenerator = new EFTFileBuilder(config);
@@ -347,7 +364,7 @@ await describe('eft-generator - CPA-005', async () => {
       }, /payeeName exceeds/);
     });
 
-    await it('throws when payeeName contains prohibited characters', () => {
+    await it('warns and sanitizes when payeeName contains prohibited characters', () => {
       const eftGenerator = new EFTFileBuilder(config);
       eftGenerator.addCreditTransaction({
         ...validBank,
@@ -355,9 +372,14 @@ await describe('eft-generator - CPA-005', async () => {
         amount: 100,
         cpaCode: cpaCodePropertyTaxes
       });
-      assert.throws(() => {
-        eftGenerator.generate();
-      }, /payeeName contains prohibited characters/);
+
+      const { result: output, warnings } = captureConsoleWarn(() =>
+        eftGenerator.generate()
+      );
+
+      assert.match(warnings.join('\n'), /payeeName contains prohibited characters/);
+      assert.match(output, /INVALID  PAYEE  NAME/);
+      assert.doesNotMatch(output, /[()]/);
     });
 
     await it('throws on duplicate crossReferenceNumber within the same file', () => {
@@ -545,7 +567,7 @@ await describe('eft-generator - CPA-005', async () => {
       );
     });
 
-    await it('throws when payeeName contains prohibited characters (spec page 59)', () => {
+    await it('warns and sanitizes payeeName prohibited characters (spec page 59)', () => {
       const eftGenerator = new EFTFileBuilder(config);
       eftGenerator.addDebitTransaction({
         ...validBank,
@@ -554,9 +576,13 @@ await describe('eft-generator - CPA-005', async () => {
         payeeName: 'ELISSA GOLDSTEIN-KRUPSKI'
       });
 
-      assert.throws(() => {
-        eftGenerator.generate();
-      }, /payeeName contains prohibited characters/);
+      const { result: output, warnings } = captureConsoleWarn(() =>
+        eftGenerator.generate()
+      );
+
+      assert.match(warnings.join('\n'), /payeeName contains prohibited characters/);
+      assert.match(output, /ELISSA GOLDSTEIN KRUPSKI/);
+      assert.doesNotMatch(output, /-/);
     });
 
     await it('throws when crossReferenceNumber contains prohibited characters (spec page 59)', () => {
