@@ -5,7 +5,7 @@ interface FixedFieldOpts {
   pad: ' ' | '0';
 }
 
-const MILLISECONDS_PER_DAY = 86_400_000;
+export const MILLISECONDS_PER_DAY = 86_400_000;
 
 // Input characters allowed before uppercasing. Lowercase ASCII letters are
 // permitted because sanitizeCPA005Text() will uppercase them; they are not
@@ -32,8 +32,11 @@ export function sanitizeCPA005Text(input: string): string {
  */
 export function fixedField(value: string, width: number, opts: FixedFieldOpts): string {
   if (value.length > width) {
+    const maxPreviewLength = 16;
+    const preview = value.slice(0, maxPreviewLength);
+    const previewSuffix = value.length > maxPreviewLength ? '...' : '';
     throw new Error(
-      `CPA-005 field overflow: value of length ${String(value.length)} exceeds width ${String(width)} (value: "${value}")`
+      `CPA-005 field overflow: value of length ${String(value.length)} exceeds width ${String(width)} (value preview: "${preview}${previewSuffix}")`
     );
   }
   return opts.align === 'left'

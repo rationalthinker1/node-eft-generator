@@ -18,20 +18,23 @@ import {
 import {
   assertRecordLength,
   containsProhibitedCharacters,
+  MILLISECONDS_PER_DAY,
   sanitizeCPA005Text,
   toPaddedJulianDate
 } from '#utils/index';
 
 const SEGMENT_LENGTH = 240;
-const MS_PER_DAY = 86_400_000;
 
 export const MAX_TRANSACTION_AMOUNT = 100_000_000;
 export const MAX_PAYMENT_DATE_OFFSET_DAYS = 173;
-const MAX_PAYMENT_DATE_OFFSET_MS = MAX_PAYMENT_DATE_OFFSET_DAYS * MS_PER_DAY;
+const MAX_PAYMENT_DATE_OFFSET_MS = MAX_PAYMENT_DATE_OFFSET_DAYS * MILLISECONDS_PER_DAY;
 
 export const SEGMENT_FIELD_WIDTHS = {
   payeeName: 30,
-  crossReference: 19
+  crossReference: 19,
+  returnInstitutionNumber: 3,
+  returnTransitNumber: 5,
+  returnAccountNumber: 12
 } as const;
 
 const blank = (n: number): string => ' '.repeat(n);
@@ -256,14 +259,6 @@ export class Segment implements Printable, Loggable, Validable {
         `<dim>${bankStr}</dim>` +
         `<dim>${cpa}</dim>`
     );
-
-    if (containsProhibitedCharacters(this.payeeName)) {
-      console.warn(
-        Logger.format(
-          `<yellow>  ⚠  payeeName contains prohibited characters and will be sanitized: ${this.payeeName}</yellow>`
-        )
-      );
-    }
   }
 
   /**
@@ -271,9 +266,8 @@ export class Segment implements Printable, Loggable, Validable {
    * crossReferenceNumber is checked at the file level by EFTFileValidator
    * (it spans all segments across all transactions).
    *
-   * Note: prohibited characters in payeeName are intentionally tolerated
-   * here — the warning is emitted by log() at write time. Real-world
-   * payee names commonly contain hyphens and apostrophes.
+   * Text fields are validated before generation so fixed-width rendering
+   * never needs to repair prohibited CPA-005 characters.
    */
   validate(): void {
     const cfg = this.#builder.getConfiguration();
@@ -295,6 +289,9 @@ export class Segment implements Printable, Loggable, Validable {
         `payeeName exceeds ${String(SEGMENT_FIELD_WIDTHS.payeeName)} characters: ${this.payeeName}`
       );
     }
+    if (containsProhibitedCharacters(this.payeeName)) {
+      throw new Error(`payeeName contains prohibited characters: ${this.payeeName}`);
+    }
 
     if (this.crossReferenceNumber !== undefined) {
       if (this.crossReferenceNumber.length > SEGMENT_FIELD_WIDTHS.crossReference) {
@@ -310,6 +307,8 @@ export class Segment implements Printable, Loggable, Validable {
     }
 
     const offsetMs = this.paymentDate.getTime() - fileCreationDate.getTime();
+    // Current compatibility rule is symmetric: payments are accepted up to
+    // 173 days before or after the file creation date.
     if (Math.abs(offsetMs) > MAX_PAYMENT_DATE_OFFSET_MS) {
       throw new Error(
         `Segment ${String(this.segmentIndex)} paymentDate is more than ${String(MAX_PAYMENT_DATE_OFFSET_DAYS)} days from fileCreationDate: ${this.paymentDate.toISOString()}`

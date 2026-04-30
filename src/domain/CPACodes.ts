@@ -744,16 +744,18 @@ const cpaTransactionCodes = {
   ...cpaTransactionCodesCommercial
 } as const satisfies Record<CPACodeNumber, CPACode>;
 
+const frozenCPATransactionCodes = Object.freeze({ ...cpaTransactionCodes });
+
 type CPATransactionCodeKey = keyof typeof cpaTransactionCodes;
 /** Stringified literal union of every recognised CPA transaction code. */
 export type CPATransactionCode = `${CPATransactionCodeKey}`;
 
 export class CPATransactionCodes {
   /** All recognised CPA-005 transaction codes keyed by their numeric value. */
-  static readonly all = cpaTransactionCodes;
+  static readonly all = frozenCPATransactionCodes;
 
   /** Type guard for whether a string is a recognised CPA transaction code. */
   static is(cpaCode: string): cpaCode is CPATransactionCode {
-    return Object.hasOwn(cpaTransactionCodes, cpaCode);
+    return Object.hasOwn(frozenCPATransactionCodes, cpaCode);
   }
 }

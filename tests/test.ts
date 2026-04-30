@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import fs from 'node:fs';
-import { describe, it, mock } from 'node:test';
+import { describe, it } from 'node:test';
 
 import { BankPADInformation, EFTFileBuilder, EFTFileValidator } from '#index';
 import { RECORD_TYPE, TRANSACTION_TYPE, type EFTConfiguration } from '#domain/types';
@@ -154,6 +154,56 @@ await describe('eft-generator - CPA-005', async () => {
         eftGenerator.validate();
       });
     });
+
+    await it('throws when returnInstitutionNumber is too long', () => {
+      const eftGenerator = new EFTFileBuilder({
+        ...config,
+        returnInstitutionNumber:
+          '0003' as NonNullable<typeof config.returnInstitutionNumber>
+      });
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        payeeName: 'TEST PAYEE',
+        amount: 100,
+        cpaCode: cpaCodePropertyTaxes
+      });
+      assert.throws(() => {
+        eftGenerator.generate();
+      }, /returnInstitutionNumber length exceeds 3/);
+    });
+
+    await it('throws when returnTransitNumber contains non-digits', () => {
+      const eftGenerator = new EFTFileBuilder({
+        ...config,
+        returnTransitNumber: '22A22' as NonNullable<typeof config.returnTransitNumber>
+      });
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        payeeName: 'TEST PAYEE',
+        amount: 100,
+        cpaCode: cpaCodePropertyTaxes
+      });
+      assert.throws(() => {
+        eftGenerator.generate();
+      }, /returnTransitNumber must contain only digits/);
+    });
+
+    await it('throws when returnAccountNumber is too long', () => {
+      const eftGenerator = new EFTFileBuilder({
+        ...config,
+        returnAccountNumber:
+          '1234567890123' as NonNullable<typeof config.returnAccountNumber>
+      });
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        payeeName: 'TEST PAYEE',
+        amount: 100,
+        cpaCode: cpaCodePropertyTaxes
+      });
+      assert.throws(() => {
+        eftGenerator.generate();
+      }, /returnAccountNumber length exceeds 12/);
+    });
   });
 
   await describe('Brand constructors', async () => {
@@ -295,6 +345,19 @@ await describe('eft-generator - CPA-005', async () => {
       }, /payeeName exceeds/);
     });
 
+    await it('throws when payeeName contains prohibited characters', () => {
+      const eftGenerator = new EFTFileBuilder(config);
+      eftGenerator.addCreditTransaction({
+        ...validBank,
+        payeeName: 'Invalid (payee) name',
+        amount: 100,
+        cpaCode: cpaCodePropertyTaxes
+      });
+      assert.throws(() => {
+        eftGenerator.generate();
+      }, /payeeName contains prohibited characters/);
+    });
+
     await it('throws on duplicate crossReferenceNumber within the same file', () => {
       const eftGenerator = new EFTFileBuilder(config);
       eftGenerator.addDebitTransaction({
@@ -316,6 +379,20 @@ await describe('eft-generator - CPA-005', async () => {
       }, /crossReferenceNumber must be unique/);
     });
 
+    await it('throws when crossReferenceNumber is too long', () => {
+      const eftGenerator = new EFTFileBuilder(config);
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        payeeName: 'VALID PAYEE NAME',
+        crossReferenceNumber: '12345678901234567890',
+        amount: 100,
+        cpaCode: cpaCodePropertyTaxes
+      });
+      assert.throws(() => {
+        eftGenerator.generate();
+      }, /crossReferenceNumber exceeds 19/);
+    });
+
     await it('throws when paymentDate is more than 173 days from fileCreationDate', () => {
       const eftGenerator = new EFTFileBuilder({
         ...config,
@@ -331,6 +408,69 @@ await describe('eft-generator - CPA-005', async () => {
       assert.throws(() => {
         eftGenerator.generate();
       }, /paymentDate is more than 173 days/);
+    });
+
+    await it('allows paymentDate exactly 173 days after fileCreationDate', () => {
+      const fileCreationDate = new Date(2025, 0, 1);
+      const paymentDate = new Date(fileCreationDate);
+      paymentDate.setDate(paymentDate.getDate() + 173);
+
+      const eftGenerator = new EFTFileBuilder({
+        ...config,
+        fileCreationDate
+      });
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        payeeName: '173 DAYS AFTER',
+        amount: 100,
+        cpaCode: cpaCodePropertyTaxes,
+        paymentDate
+      });
+      assert.doesNotThrow(() => {
+        eftGenerator.generate();
+      });
+    });
+
+    await it('allows paymentDate exactly 173 days before fileCreationDate', () => {
+      const fileCreationDate = new Date(2025, 6, 23);
+      const paymentDate = new Date(fileCreationDate);
+      paymentDate.setDate(paymentDate.getDate() - 173);
+
+      const eftGenerator = new EFTFileBuilder({
+        ...config,
+        fileCreationDate
+      });
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        payeeName: '173 DAYS BEFORE',
+        amount: 100,
+        cpaCode: cpaCodePropertyTaxes,
+        paymentDate
+      });
+      assert.doesNotThrow(() => {
+        eftGenerator.generate();
+      });
+    });
+
+    await it('allows paymentDate 172 days after fileCreationDate', () => {
+      const fileCreationDate = new Date(2025, 0, 1);
+      const paymentDate = new Date(fileCreationDate);
+      paymentDate.setDate(paymentDate.getDate() + 172);
+
+      const eftGenerator = new EFTFileBuilder({
+        ...config,
+        fileCreationDate
+      });
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        payeeName: '172 DAYS AFTER',
+        amount: 100,
+        cpaCode: cpaCodePropertyTaxes,
+        paymentDate
+      });
+      assert.doesNotThrow(() => {
+        eftGenerator.generate();
+      });
     });
   });
 
@@ -403,10 +543,7 @@ await describe('eft-generator - CPA-005', async () => {
       );
     });
 
-    await it('warns and sanitizes when payeeName contains prohibited characters (spec page 59)', () => {
-      // Real-world payee names commonly contain hyphens and apostrophes
-      // that the spec prohibits; payeeName is the only field that warns
-      // rather than throws. See EFTFileValidator class doc.
+    await it('throws when payeeName contains prohibited characters (spec page 59)', () => {
       const eftGenerator = new EFTFileBuilder(config);
       eftGenerator.addDebitTransaction({
         ...validBank,
@@ -415,23 +552,9 @@ await describe('eft-generator - CPA-005', async () => {
         payeeName: 'ELISSA GOLDSTEIN-KRUPSKI'
       });
 
-      const warnings: string[] = [];
-      const warnSpy = mock.method(console, 'warn', (...args: unknown[]) => {
-        warnings.push(args.map(String).join(' '));
-      });
-
-      let output = '';
-      try {
-        output = eftGenerator.generate();
-      } finally {
-        warnSpy.mock.restore();
-      }
-
-      assert.ok(
-        warnings.some((w) => /payeeName contains prohibited characters/.test(w)),
-        `expected warning, got ${JSON.stringify(warnings)}`
-      );
-      assert.match(output, /^[0-9A-Z =_$.&*,\r]*$/);
+      assert.throws(() => {
+        eftGenerator.generate();
+      }, /payeeName contains prohibited characters/);
     });
 
     await it('throws when crossReferenceNumber contains prohibited characters (spec page 59)', () => {

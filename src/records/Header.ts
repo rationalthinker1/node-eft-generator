@@ -1,6 +1,7 @@
 import type { EFTFileBuilder } from '#EFTFileBuilder';
 import { Field, formatField, renderFields } from '#records/Field';
 import { Logger } from '#utils/Logger';
+import { SEGMENT_FIELD_WIDTHS } from '#records/Segment';
 import {
   RECORD_TYPE,
   type Loggable,
@@ -15,6 +16,7 @@ import {
 } from '#utils/index';
 
 const RECORD_LENGTH = 1464;
+const DIGITS_ONLY = /^\d+$/;
 
 export const HEADER_FIELD_WIDTHS = {
   originatorId: 10,
@@ -138,8 +140,7 @@ export class Header implements Printable, Loggable, Validable {
       );
     }
 
-    // return* must be defined together or not at all (their branded
-    // constructors already validated each value's shape).
+    // return* must be defined together or not at all.
     const returnFields = [
       cfg.returnInstitutionNumber,
       cfg.returnTransitNumber,
@@ -149,6 +150,28 @@ export class Header implements Printable, Loggable, Validable {
     if (definedCount > 0 && definedCount < returnFields.length) {
       throw new Error(
         'returnInstitutionNumber, returnTransitNumber, and returnAccountNumber must be defined together, or not defined at all.'
+      );
+    }
+
+    if (cfg.returnInstitutionNumber !== undefined) {
+      validateDigitsField(
+        'returnInstitutionNumber',
+        cfg.returnInstitutionNumber,
+        SEGMENT_FIELD_WIDTHS.returnInstitutionNumber
+      );
+    }
+    if (cfg.returnTransitNumber !== undefined) {
+      validateDigitsField(
+        'returnTransitNumber',
+        cfg.returnTransitNumber,
+        SEGMENT_FIELD_WIDTHS.returnTransitNumber
+      );
+    }
+    if (cfg.returnAccountNumber !== undefined) {
+      validateDigitsField(
+        'returnAccountNumber',
+        cfg.returnAccountNumber,
+        SEGMENT_FIELD_WIDTHS.returnAccountNumber
       );
     }
   }
@@ -170,5 +193,14 @@ export class Header implements Printable, Loggable, Validable {
       this.destinationCurrency === '' ? '(default)' : this.destinationCurrency
     );
     Logger.endSection();
+  }
+}
+
+function validateDigitsField(fieldName: string, value: string, width: number): void {
+  if (!DIGITS_ONLY.test(value)) {
+    throw new Error(`${fieldName} must contain only digits: ${value}`);
+  }
+  if (value.length > width) {
+    throw new Error(`${fieldName} length exceeds ${String(width)}: ${value}`);
   }
 }
