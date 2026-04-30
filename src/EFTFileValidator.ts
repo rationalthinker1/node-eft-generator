@@ -62,7 +62,7 @@ export class EFTFileValidator {
    *
    * Throws on the first violation found.
    */
-  assertCompliantOutput(output: string): void {
+  validateFile(output: string): void {
     if (output.length === 0) {
       throw new Error('CPA-005 output is empty.');
     }

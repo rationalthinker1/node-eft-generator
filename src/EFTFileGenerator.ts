@@ -3,7 +3,12 @@ import type { EFTFileBuilder } from '#EFTFileBuilder';
 import { EFTFileLogger } from '#EFTFileLogger';
 import { EFTFileValidator } from '#EFTFileValidator';
 import { RECORD_TYPE, TRANSACTION_TYPE, type EFTTransaction } from '#types';
-import { NEWLINE, sanitizeCPA005Text, toPaddedJulianDate } from '#utils';
+import {
+  NEWLINE,
+  containsProhibitedCharacters,
+  sanitizeCPA005Text,
+  toPaddedJulianDate
+} from '#utils';
 
 const RIGHT_ZERO = { align: 'right', pad: '0' } as const;
 const LEFT_SPACE = { align: 'left', pad: ' ' } as const;
@@ -48,7 +53,7 @@ export class EFTFileGenerator {
 
     // End-of-pipeline file-level invariant check. Catches anything the
     // input validation and per-record assertions could miss.
-    this.#validator.assertCompliantOutput(output);
+    this.#validator.validateFile(output);
 
     return output;
   }
@@ -57,9 +62,11 @@ export class EFTFileGenerator {
     const eftConfig = this.#builder.getConfiguration();
     const widths = EFTFileSpec.FIELD_WIDTHS;
 
-    const fileCreationJulianDate = toPaddedJulianDate(
-      eftConfig.fileCreationDate ?? new Date()
-    );
+    const fileCreationDate = eftConfig.fileCreationDate ?? new Date();
+    const fileCreationJulianDate = toPaddedJulianDate(fileCreationDate);
+
+    // Sanitize once, reuse for both file output and the logger context.
+    const originatorId = sanitizeCPA005Text(eftConfig.originatorId);
 
     const dataCentre = EFTFileSpec.fixedField(
       eftConfig.destinationDataCentre,
@@ -82,7 +89,7 @@ export class EFTFileGenerator {
       // Logical Record Count
       EFTFileSpec.fixedField('1', widths.logicalRecordCount, RIGHT_ZERO) +
       // Originator's Id / Client Number
-      EFTFileSpec.fixedField(sanitizeCPA005Text(eftConfig.originatorId), widths.originatorId, LEFT_SPACE) +
+      EFTFileSpec.fixedField(originatorId, widths.originatorId, LEFT_SPACE) +
       // File Creation Number
       EFTFileSpec.fixedField(
         eftConfig.fileCreationNumber,
@@ -101,9 +108,12 @@ export class EFTFileGenerator {
       EFTFileSpec.fixedField('', widths.headerFiller, LEFT_SPACE);
 
     this.#logger.logHeader({
-      eftConfig,
-      fileCreationDate: eftConfig.fileCreationDate ?? new Date(),
-      fileCreationJulianDate
+      originatorId,
+      fileCreationNumber: eftConfig.fileCreationNumber,
+      fileCreationDate,
+      fileCreationJulianDate,
+      destinationDataCentre: eftConfig.destinationDataCentre,
+      destinationCurrency: eftConfig.destinationCurrency ?? '(default)'
     });
 
     return EFTFileSpec.assertRecordLength(record, 'header');
@@ -150,7 +160,7 @@ export class EFTFileGenerator {
       const paymentDate = segment.paymentDate ?? new Date();
       const paymentJulianDate = toPaddedJulianDate(paymentDate);
 
-      const crossReferenceNumber =
+      const rawCrossReferenceNumber =
         segment.crossReferenceNumber ??
         'F' +
           eftConfig.fileCreationNumber +
@@ -159,14 +169,30 @@ export class EFTFileGenerator {
           'S' +
           (segmentIndex + 1).toString();
 
+      // Sanitize once, reuse for both file output and the logger context.
+      const crossReferenceNumber = sanitizeCPA005Text(rawCrossReferenceNumber);
+      const payeeName = sanitizeCPA005Text(segment.payeeName);
+      const sanitizedShortName = sanitizeCPA005Text(originatorShortName);
+      const sanitizedLongName = sanitizeCPA005Text(eftConfig.originatorLongName);
+
       this.#logger.logSegment({
         recordType: transaction.recordType,
         recordNumber: this.#recordCount,
         segmentIndex,
-        segment,
-        resolvedCrossReferenceNumber: crossReferenceNumber,
+        crossReferenceNumber,
+        payeeName,
+        amount: segment.amount,
+        bankInstitutionNumber: segment.bankInstitutionNumber,
+        bankTransitNumber: segment.bankTransitNumber,
+        bankAccountNumber: segment.bankAccountNumber,
+        cpaCode: segment.cpaCode,
         paymentDate,
-        paymentJulianDate
+        paymentJulianDate,
+        ...(containsProhibitedCharacters(segment.payeeName)
+          ? {
+              warning: `payeeName contains prohibited characters and will be sanitized: ${segment.payeeName}`
+            }
+          : {})
       });
 
       // Positions 215-264 differ by record type. C: 39 blanks + 11 zeros.
@@ -210,30 +236,22 @@ export class EFTFileGenerator {
         EFTFileSpec.fixedField('', widths.segmentFillerZeros, RIGHT_ZERO) +
         // Originator's Short Name
         EFTFileSpec.fixedField(
-          sanitizeCPA005Text(originatorShortName),
+          sanitizedShortName,
           widths.originatorShortName,
           LEFT_SPACE
         ) +
         // Credit: Payee Name / Debit: Payor Name
-        EFTFileSpec.fixedField(
-          sanitizeCPA005Text(segment.payeeName),
-          widths.payeeName,
-          LEFT_SPACE
-        ) +
+        EFTFileSpec.fixedField(payeeName, widths.payeeName, LEFT_SPACE) +
         // Originator's Long Name
         EFTFileSpec.fixedField(
-          sanitizeCPA005Text(eftConfig.originatorLongName),
+          sanitizedLongName,
           widths.originatorLongName,
           LEFT_SPACE
         ) +
         // Filler (positions 165-174)
         EFTFileSpec.fixedField('', widths.segmentFillerBlanks, LEFT_SPACE) +
         // Cross Reference Number
-        EFTFileSpec.fixedField(
-          sanitizeCPA005Text(crossReferenceNumber),
-          widths.crossReference,
-          LEFT_SPACE
-        ) +
+        EFTFileSpec.fixedField(crossReferenceNumber, widths.crossReference, LEFT_SPACE) +
         // Institutional ID Number for Returns (lead zero)
         EFTFileSpec.fixedField('', widths.institutionalIdLead, RIGHT_ZERO) +
         // Institution Number for Returns

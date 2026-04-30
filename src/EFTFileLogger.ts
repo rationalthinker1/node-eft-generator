@@ -1,10 +1,4 @@
-import {
-  TRANSACTION_TYPE,
-  type EFTConfiguration,
-  type EFTTransactionSegment,
-  type TransactionType
-} from '#types';
-import { containsProhibitedCharacters } from '#utils';
+import { TRANSACTION_TYPE, type TransactionType } from '#types';
 
 const ANSI = {
   reset: '\x1b[0m',
@@ -40,20 +34,40 @@ function fmtCurrency(amount: number): string {
   );
 }
 
+/**
+ * All fields are display values — exactly as they will appear in the
+ * generated file (text fields already sanitized, currency already in the
+ * caller's preferred display string, etc.). The logger does not
+ * transform them; it only paints and aligns.
+ */
 export interface HeaderLogContext {
-  eftConfig: EFTConfiguration;
+  originatorId: string;
+  fileCreationNumber: string;
   fileCreationDate: Date;
   fileCreationJulianDate: string;
+  destinationDataCentre: string;
+  destinationCurrency: string;
 }
 
 export interface SegmentLogContext {
   recordType: TransactionType;
   recordNumber: number;
   segmentIndex: number;
-  segment: EFTTransactionSegment;
-  resolvedCrossReferenceNumber: string;
+  crossReferenceNumber: string;
+  payeeName: string;
+  amount: number;
+  bankInstitutionNumber: string;
+  bankTransitNumber: string;
+  bankAccountNumber: string;
+  cpaCode: string;
   paymentDate: Date;
   paymentJulianDate: string;
+  /**
+   * Optional inline warning, rendered immediately above the row so it
+   * stays attached to its transaction. Caller is responsible for
+   * deciding when to populate it.
+   */
+  warning?: string;
 }
 
 export interface TrailerLogContext {
@@ -67,71 +81,52 @@ export interface TrailerLogContext {
 /**
  * Console logger for `EFTFileGenerator`.
  *
- * Renders header / segment / trailer information in a colored, tabular
- * layout intended for terminal output during file generation. The
- * generator composes one of these and calls the three log methods at
- * the right pipeline points; subclasses can override individual methods
- * (e.g., to silence output, write to a file, or emit JSON).
+ * Pure presentation layer — receives display-ready field values and
+ * renders them in a colored, tabular layout for terminal output during
+ * file generation. The generator owns all domain logic (sanitization,
+ * warning detection, value derivation); the logger just paints.
+ *
+ * Subclass and override individual methods to redirect output, suppress
+ * logging, emit JSON, etc.
  */
 export class EFTFileLogger {
   logHeader(ctx: HeaderLogContext): void {
-    const { eftConfig, fileCreationDate, fileCreationJulianDate } = ctx;
-    const dayOfYear = fileCreationJulianDate.slice(3);
+    const dayOfYear = ctx.fileCreationJulianDate.slice(3);
 
     console.log('');
     console.log(paint(ANSI.dim, SECTION_RULE));
     console.log('  ' + paint(ANSI.bold + ANSI.cyan, 'HEADER'));
-    console.log(row('originator', paint(ANSI.bold, eftConfig.originatorId)));
-    console.log(row('fcn', paint(ANSI.bold, eftConfig.fileCreationNumber)));
+    console.log(row('originator', paint(ANSI.bold, ctx.originatorId)));
+    console.log(row('fcn', paint(ANSI.bold, ctx.fileCreationNumber)));
     console.log(
       row(
         'created',
-        isoDate(fileCreationDate) +
+        isoDate(ctx.fileCreationDate) +
           paint(
             ANSI.dim,
-            `  ·  day ${dayOfYear}  ·  julian ${fileCreationJulianDate}`
+            `  ·  day ${dayOfYear}  ·  julian ${ctx.fileCreationJulianDate}`
           )
       )
     );
-    console.log(row('centre', eftConfig.destinationDataCentre));
-    console.log(row('currency', eftConfig.destinationCurrency ?? '(default)'));
+    console.log(row('centre', ctx.destinationDataCentre));
+    console.log(row('currency', ctx.destinationCurrency));
     console.log(paint(ANSI.dim, SECTION_RULE));
     console.log('');
   }
 
   logSegment(ctx: SegmentLogContext): void {
-    const {
-      recordType,
-      recordNumber,
-      segmentIndex,
-      segment,
-      resolvedCrossReferenceNumber,
-      paymentDate,
-      paymentJulianDate
-    } = ctx;
-
-    // Inline warning so it appears with its transaction, not at the top.
-    if (containsProhibitedCharacters(segment.payeeName)) {
-      console.warn(
-        paint(
-          ANSI.yellow,
-          `  ⚠  payeeName contains prohibited characters and will be sanitized: ${segment.payeeName}`
-        )
-      );
-    }
-
     const tagColor =
-      recordType === TRANSACTION_TYPE.CREDIT ? ANSI.green : ANSI.red;
-    const dayOfYear = paymentJulianDate.slice(3);
-    const bank = `${segment.bankInstitutionNumber}-${segment.bankTransitNumber}-${segment.bankAccountNumber}`;
+      ctx.recordType === TRANSACTION_TYPE.CREDIT ? ANSI.green : ANSI.red;
+    const dayOfYear = ctx.paymentJulianDate.slice(3);
+    const bank = `${ctx.bankInstitutionNumber}-${ctx.bankTransitNumber}-${ctx.bankAccountNumber}`;
 
-    const idx = `${recordType} ${recordNumber.toString().padStart(3, '0')}.${(segmentIndex + 1).toString()}`;
-    const xref = resolvedCrossReferenceNumber.padEnd(22);
-    const payee = segment.payeeName.padEnd(32);
-    const amount = fmtCurrency(segment.amount).padStart(12);
-    const dateStr = `${isoDate(paymentDate)} (${dayOfYear})`.padEnd(18);
+    const idx = `${ctx.recordType} ${ctx.recordNumber.toString().padStart(3, '0')}.${(ctx.segmentIndex + 1).toString()}`;
+    const xref = ctx.crossReferenceNumber.padEnd(22);
+    const payee = ctx.payeeName.padEnd(32);
+    const amount = fmtCurrency(ctx.amount).padStart(12);
+    const dateStr = `${isoDate(ctx.paymentDate)} (${dayOfYear})`.padEnd(18);
     const bankStr = bank.padEnd(22);
-    const cpa = `cpa ${segment.cpaCode}`;
+    const cpa = `cpa ${ctx.cpaCode}`;
 
     console.log(
       '  ' +
@@ -144,30 +139,31 @@ export class EFTFileLogger {
         paint(ANSI.dim, bankStr) +
         paint(ANSI.dim, cpa)
     );
+
+    if (ctx.warning !== undefined) {
+      console.warn(paint(ANSI.yellow, `  ⚠  ${ctx.warning}`));
+    }
   }
 
   logTrailer(ctx: TrailerLogContext): void {
-    const { totalRecordCount, debitCount, debitValue, creditCount, creditValue } =
-      ctx;
-
     console.log('');
     console.log(paint(ANSI.dim, SECTION_RULE));
     console.log('  ' + paint(ANSI.bold + ANSI.cyan, 'TRAILER'));
-    console.log(row('records', paint(ANSI.bold, totalRecordCount.toString())));
+    console.log(row('records', paint(ANSI.bold, ctx.totalRecordCount.toString())));
     console.log(
       row(
         'debits',
-        paint(ANSI.bold, debitCount.toString().padStart(4)) +
+        paint(ANSI.bold, ctx.debitCount.toString().padStart(4)) +
           '   ' +
-          paint(ANSI.yellow, fmtCurrency(debitValue))
+          paint(ANSI.yellow, fmtCurrency(ctx.debitValue))
       )
     );
     console.log(
       row(
         'credits',
-        paint(ANSI.bold, creditCount.toString().padStart(4)) +
+        paint(ANSI.bold, ctx.creditCount.toString().padStart(4)) +
           '   ' +
-          paint(ANSI.yellow, fmtCurrency(creditValue))
+          paint(ANSI.yellow, fmtCurrency(ctx.creditValue))
       )
     );
     console.log(paint(ANSI.dim, SECTION_RULE));

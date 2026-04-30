@@ -514,7 +514,7 @@ await describe('eft-generator - CPA-005', async () => {
     });
   });
 
-  await describe('assertCompliantOutput', async () => {
+  await describe('validateFile', async () => {
     function builderWithOneTransaction(): EFTFileBuilder {
       const eftGenerator = new EFTFileBuilder(config);
       eftGenerator.addDebitTransaction({
@@ -532,7 +532,7 @@ await describe('eft-generator - CPA-005', async () => {
 
     await it('throws on empty output', () => {
       assert.throws(
-        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(''),
+        () => validatorFor(builderWithOneTransaction()).validateFile(''),
         /output is empty/
       );
     });
@@ -541,7 +541,7 @@ await describe('eft-generator - CPA-005', async () => {
       const valid = builderWithOneTransaction().generate();
       const tampered = valid.replace('\r', '\r\n');
       assert.throws(
-        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        () => validatorFor(builderWithOneTransaction()).validateFile(tampered),
         /contains LF/
       );
     });
@@ -553,7 +553,7 @@ await describe('eft-generator - CPA-005', async () => {
       const lines = valid.split('\r');
       const headerAndTrailer = [lines[0], lines.at(-1)].join('\r');
       assert.throws(
-        () => validatorFor(headerOnlyBuilder).assertCompliantOutput(headerAndTrailer),
+        () => validatorFor(headerOnlyBuilder).validateFile(headerAndTrailer),
         /requires at least 3/
       );
     });
@@ -564,7 +564,7 @@ await describe('eft-generator - CPA-005', async () => {
       const lines = valid.split('\r');
       assert.strictEqual((lines[1] ?? '').length, 1464);
       assert.doesNotThrow(() => {
-        validatorFor(builder).assertCompliantOutput(valid);
+        validatorFor(builder).validateFile(valid);
       });
     });
 
@@ -574,7 +574,7 @@ await describe('eft-generator - CPA-005', async () => {
       lines[1] = (lines[1] ?? '').slice(0, 1463);
       const tampered = lines.join('\r');
       assert.throws(
-        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        () => validatorFor(builderWithOneTransaction()).validateFile(tampered),
         /record 2 length is 1463/
       );
     });
@@ -585,7 +585,7 @@ await describe('eft-generator - CPA-005', async () => {
       lines[1] = (lines[1] ?? '') + ' ';
       const tampered = lines.join('\r');
       assert.throws(
-        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        () => validatorFor(builderWithOneTransaction()).validateFile(tampered),
         /record 2 length is 1465/
       );
     });
@@ -596,7 +596,7 @@ await describe('eft-generator - CPA-005', async () => {
       lines[1] = (lines[1] ?? '').slice(0, 100);
       const tampered = lines.join('\r');
       assert.throws(
-        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        () => validatorFor(builderWithOneTransaction()).validateFile(tampered),
         /record 2 length is 100/
       );
     });
@@ -609,7 +609,7 @@ await describe('eft-generator - CPA-005', async () => {
       lines[1] = 'x' + original.slice(1);
       const tampered = lines.join('\r');
       assert.throws(
-        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        () => validatorFor(builderWithOneTransaction()).validateFile(tampered),
         /prohibited character "x"/
       );
     });
@@ -622,7 +622,7 @@ await describe('eft-generator - CPA-005', async () => {
       lines[0] = 'X' + header.slice(1);
       const tampered = lines.join('\r');
       assert.throws(
-        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        () => validatorFor(builderWithOneTransaction()).validateFile(tampered),
         /first record must start with 'A'/
       );
     });
@@ -634,7 +634,7 @@ await describe('eft-generator - CPA-005', async () => {
       lines[lines.length - 1] = 'X' + trailer.slice(1);
       const tampered = lines.join('\r');
       assert.throws(
-        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        () => validatorFor(builderWithOneTransaction()).validateFile(tampered),
         /last record must start with 'Z'/
       );
     });
@@ -648,7 +648,7 @@ await describe('eft-generator - CPA-005', async () => {
       lines[lines.length - 1] = trailer.charAt(0) + '999999999' + trailer.slice(10);
       const tampered = lines.join('\r');
       assert.throws(
-        () => validatorFor(builderWithOneTransaction()).assertCompliantOutput(tampered),
+        () => validatorFor(builderWithOneTransaction()).validateFile(tampered),
         /trailer record count is "999999999"/
       );
     });
@@ -657,7 +657,7 @@ await describe('eft-generator - CPA-005', async () => {
       const builder = builderWithOneTransaction();
       const output = builder.generate();
       assert.doesNotThrow(() => {
-        validatorFor(builder).assertCompliantOutput(output);
+        validatorFor(builder).validateFile(output);
       });
     });
   });
