@@ -74,7 +74,7 @@ export class EFTFileGenerator {
       // Logical Record Count
       EFTFileSpec.fixedField('1', widths.logicalRecordCount, RIGHT_ZERO) +
       // Originator's Id / Client Number
-      EFTFileSpec.fixedField(eftConfig.originatorId, widths.originatorId, LEFT_SPACE) +
+      EFTFileSpec.fixedField(sanitizeCPA005Text(eftConfig.originatorId), widths.originatorId, LEFT_SPACE) +
       // File Creation Number
       EFTFileSpec.fixedField(
         eftConfig.fileCreationNumber,
@@ -122,7 +122,7 @@ export class EFTFileGenerator {
         RIGHT_ZERO
       ) +
       // Origination Control Data
-      EFTFileSpec.fixedField(eftConfig.originatorId, widths.originatorId, LEFT_SPACE) +
+      EFTFileSpec.fixedField(sanitizeCPA005Text(eftConfig.originatorId), widths.originatorId, LEFT_SPACE) +
       EFTFileSpec.fixedField(
         eftConfig.fileCreationNumber,
         widths.fileCreationNumber,
@@ -262,7 +262,7 @@ export class EFTFileGenerator {
         RIGHT_ZERO
       ) +
       // Origination Control Data
-      EFTFileSpec.fixedField(eftConfig.originatorId, widths.originatorId, LEFT_SPACE) +
+      EFTFileSpec.fixedField(sanitizeCPA005Text(eftConfig.originatorId), widths.originatorId, LEFT_SPACE) +
       EFTFileSpec.fixedField(
         eftConfig.fileCreationNumber,
         widths.fileCreationNumber,

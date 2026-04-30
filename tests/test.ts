@@ -413,6 +413,35 @@ await describe('eft-generator - CPA-005', async () => {
         /originatorId contains prohibited characters/
       );
     });
+
+    await it('throws when payeeName contains prohibited characters (spec page 59)', () => {
+      const eftGenerator = new EFTFileBuilder(config);
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        cpaCode: cpaCodePropertyTaxes,
+        amount: 100,
+        payeeName: 'Smith & Co. (Inc.)'
+      });
+      assert.throws(
+        () => new EFTFileValidator(eftGenerator).validate(),
+        /payeeName contains prohibited characters/
+      );
+    });
+
+    await it('throws when crossReferenceNumber contains prohibited characters (spec page 59)', () => {
+      const eftGenerator = new EFTFileBuilder(config);
+      eftGenerator.addDebitTransaction({
+        ...validBank,
+        cpaCode: cpaCodePropertyTaxes,
+        amount: 100,
+        payeeName: 'TEST PAYEE',
+        crossReferenceNumber: 'REF-12345(A)'
+      });
+      assert.throws(
+        () => new EFTFileValidator(eftGenerator).validate(),
+        /crossReferenceNumber contains prohibited characters/
+      );
+    });
   });
 
   await describe('Spec field positions', async () => {
