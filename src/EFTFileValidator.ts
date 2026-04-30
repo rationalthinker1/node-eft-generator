@@ -26,13 +26,15 @@ const MINIMUM_RECORD_COUNT = 3;
  * Validates an `EFTFileBuilder` against the CPA-005 specification.
  *
  * Throws on every spec violation, with one exception: prohibited
- * characters in `payeeName` emit a `console.warn` instead of throwing.
- * Payee names are third-party data and routinely contain spec-prohibited
- * characters (hyphens in 'GOLDSTEIN-KRUPSKI', apostrophes in 'O'BRIEN',
- * etc.); the sanitizer cleans those at write time so the output stays
- * compliant. All other fields (including originatorId, the originator
- * names, and crossReferenceNumber) still throw — they are
- * caller-controlled and bad input there is a configuration bug.
+ * characters in `payeeName` are accepted and sanitized at write time
+ * (third-party data routinely contains hyphens like 'GOLDSTEIN-KRUPSKI'
+ * and apostrophes like O'BRIEN). The corresponding `console.warn` is
+ * emitted by `EFTFileGenerator.#logSegment` so it appears next to the
+ * transaction it describes, not in a batch at the top of the run.
+ *
+ * All other fields (originatorId, the originator names, and
+ * crossReferenceNumber) still throw — they are caller-controlled and
+ * bad input there is a configuration bug.
  *
  * The validator is run automatically by `EFTFileGenerator.generate()`,
  * so any throw aborts file generation before any record is emitted.
@@ -277,11 +279,9 @@ export class EFTFileValidator {
             `payeeName exceeds ${String(EFTFileSpec.FIELD_WIDTHS.payeeName)} characters: ${segment.payeeName}`
           );
         }
-        if (containsProhibitedCharacters(segment.payeeName)) {
-          console.warn(
-            `payeeName contains prohibited characters and will be sanitized: ${segment.payeeName}`
-          );
-        }
+        // Note: prohibited characters in payeeName are intentionally
+        // tolerated; the warning is emitted by the generator inline with
+        // the transaction log so it stays next to the segment it refers to.
 
         if (segment.crossReferenceNumber !== undefined) {
           if (

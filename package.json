@@ -44,6 +44,7 @@
     "build/EFTFileBuilder.*",
     "build/EFTFileValidator.*",
     "build/EFTFileGenerator.*",
+    "build/EFTFileLogger.*",
     "build/utils.*",
     "build/cpaCodes/"
   ],

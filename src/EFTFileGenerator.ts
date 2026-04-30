@@ -1,5 +1,6 @@
 import { EFTFileSpec } from '#EFTFileSpec';
 import type { EFTFileBuilder } from '#EFTFileBuilder';
+import { EFTFileLogger } from '#EFTFileLogger';
 import { EFTFileValidator } from '#EFTFileValidator';
 import { RECORD_TYPE, TRANSACTION_TYPE, type EFTTransaction } from '#types';
 import { NEWLINE, sanitizeCPA005Text, toPaddedJulianDate } from '#utils';
@@ -10,6 +11,7 @@ const LEFT_SPACE = { align: 'left', pad: ' ' } as const;
 export class EFTFileGenerator {
   readonly #builder: EFTFileBuilder;
   readonly #validator: EFTFileValidator;
+  readonly #logger: EFTFileLogger;
 
   #recordCount = 1;
   #totalValueDebits = 0;
@@ -17,9 +19,15 @@ export class EFTFileGenerator {
   #totalValueCredits = 0;
   #totalNumberCredits = 0;
 
-  constructor(builder: EFTFileBuilder) {
+  /**
+   * @param builder source of configuration and transactions
+   * @param logger optional logger; defaults to a new EFTFileLogger instance.
+   * Pass a custom subclass to redirect output, suppress logging, etc.
+   */
+  constructor(builder: EFTFileBuilder, logger?: EFTFileLogger) {
     this.#builder = builder;
     this.#validator = new EFTFileValidator(builder);
+    this.#logger = logger ?? new EFTFileLogger();
   }
 
   generate(): string {
@@ -92,6 +100,12 @@ export class EFTFileGenerator {
       // Filler
       EFTFileSpec.fixedField('', widths.headerFiller, LEFT_SPACE);
 
+    this.#logger.logHeader({
+      eftConfig,
+      fileCreationDate: eftConfig.fileCreationDate ?? new Date(),
+      fileCreationJulianDate
+    });
+
     return EFTFileSpec.assertRecordLength(record, 'header');
   }
 
@@ -133,7 +147,8 @@ export class EFTFileGenerator {
     const originatorShortName = eftConfig.originatorShortName ?? '';
 
     for (const [segmentIndex, segment] of transaction.segments.entries()) {
-      const paymentJulianDate = toPaddedJulianDate(segment.paymentDate ?? new Date());
+      const paymentDate = segment.paymentDate ?? new Date();
+      const paymentJulianDate = toPaddedJulianDate(paymentDate);
 
       const crossReferenceNumber =
         segment.crossReferenceNumber ??
@@ -143,6 +158,16 @@ export class EFTFileGenerator {
           this.#recordCount.toString() +
           'S' +
           (segmentIndex + 1).toString();
+
+      this.#logger.logSegment({
+        recordType: transaction.recordType,
+        recordNumber: this.#recordCount,
+        segmentIndex,
+        segment,
+        resolvedCrossReferenceNumber: crossReferenceNumber,
+        paymentDate,
+        paymentJulianDate
+      });
 
       // Positions 215-264 differ by record type. C: 39 blanks + 11 zeros.
       // D (page 64): zero-fill at 215-247 (MICR area defaults to zeros), 6 blanks at
@@ -294,6 +319,14 @@ export class EFTFileGenerator {
       ) +
       // Filler (positions 69-1464)
       EFTFileSpec.fixedField('', widths.trailerFiller, LEFT_SPACE);
+
+    this.#logger.logTrailer({
+      totalRecordCount: this.#recordCount + 1,
+      debitCount: this.#totalNumberDebits,
+      debitValue: this.#totalValueDebits,
+      creditCount: this.#totalNumberCredits,
+      creditValue: this.#totalValueCredits
+    });
 
     return EFTFileSpec.assertRecordLength(record, 'trailer');
   }
