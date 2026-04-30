@@ -1,4 +1,3 @@
-import { EFTFileSpec } from '#EFTFileSpec';
 import type { EFTFileBuilder } from '#EFTFileBuilder';
 import {
   RECORD_TYPE,
@@ -7,6 +6,18 @@ import {
   type EFTTransaction
 } from '#types';
 import { NEWLINE, containsProhibitedCharacters } from '#utils';
+
+export const RECORD_LENGTH = 1464;
+export const MAX_SEGMENTS_PER_RECORD = 6;
+export const MAX_TRANSACTION_AMOUNT = 100_000_000;
+export const MAX_FILE_TRANSACTION_COUNT = 999_999_999;
+export const FIELD_WIDTHS = {
+  originatorId: 10,
+  originatorShortName: 15,
+  originatorLongName: 30,
+  payeeName: 30,
+  crossReference: 19
+} as const;
 
 const MS_PER_DAY = 86_400_000;
 const MAX_PAYMENT_DATE_OFFSET_DAYS = 173;
@@ -54,7 +65,7 @@ export class EFTFileValidator {
   /**
    * Comprehensive end-of-pipeline check on the fully-assembled file.
    *
-   * `validate()` catches bad input and `EFTFileSpec.assertRecordLength`
+   * `validate()` catches bad input and `assertRecordLength`
    * catches malformed individual records. This method is the last line of
    * defence: it verifies file-level invariants no per-record check can see
    * (record ordering, exactly-one header/trailer, trailer reconciliation,
@@ -84,9 +95,9 @@ export class EFTFileValidator {
     for (const [index, line] of lines.entries()) {
       const recordNumber = index + 1;
 
-      if (line.length !== EFTFileSpec.RECORD_LENGTH) {
+      if (line.length !== RECORD_LENGTH) {
         throw new Error(
-          `CPA-005 record ${String(recordNumber)} length is ${String(line.length)}, expected ${String(EFTFileSpec.RECORD_LENGTH)}.`
+          `CPA-005 record ${String(recordNumber)} length is ${String(line.length)}, expected ${String(RECORD_LENGTH)}.`
         );
       }
 
@@ -154,9 +165,9 @@ export class EFTFileValidator {
   }
 
   validateConfig(eftConfig: EFTConfiguration): void {
-    if (eftConfig.originatorId.length > EFTFileSpec.FIELD_WIDTHS.originatorId) {
+    if (eftConfig.originatorId.length > FIELD_WIDTHS.originatorId) {
       throw new Error(
-        `originatorId length exceeds ${String(EFTFileSpec.FIELD_WIDTHS.originatorId)}: ${eftConfig.originatorId}`
+        `originatorId length exceeds ${String(FIELD_WIDTHS.originatorId)}: ${eftConfig.originatorId}`
       );
     }
 
@@ -179,10 +190,10 @@ export class EFTFileValidator {
     }
 
     if (
-      eftConfig.originatorShortName.length > EFTFileSpec.FIELD_WIDTHS.originatorShortName
+      eftConfig.originatorShortName.length > FIELD_WIDTHS.originatorShortName
     ) {
       throw new Error(
-        `originatorShortName exceeds ${String(EFTFileSpec.FIELD_WIDTHS.originatorShortName)} characters: ${eftConfig.originatorShortName}`
+        `originatorShortName exceeds ${String(FIELD_WIDTHS.originatorShortName)} characters: ${eftConfig.originatorShortName}`
       );
     }
 
@@ -193,10 +204,10 @@ export class EFTFileValidator {
     }
 
     if (
-      eftConfig.originatorLongName.length > EFTFileSpec.FIELD_WIDTHS.originatorLongName
+      eftConfig.originatorLongName.length > FIELD_WIDTHS.originatorLongName
     ) {
       throw new Error(
-        `originatorLongName exceeds ${String(EFTFileSpec.FIELD_WIDTHS.originatorLongName)} characters: ${eftConfig.originatorLongName}`
+        `originatorLongName exceeds ${String(FIELD_WIDTHS.originatorLongName)} characters: ${eftConfig.originatorLongName}`
       );
     }
 
@@ -233,9 +244,9 @@ export class EFTFileValidator {
     if (eftTransactions.length === 0) {
       throw new Error('There are no transactions in this file.');
     }
-    if (eftTransactions.length > EFTFileSpec.MAX_FILE_TRANSACTION_COUNT) {
+    if (eftTransactions.length > MAX_FILE_TRANSACTION_COUNT) {
       throw new Error(
-        `Transaction count exceeds ${String(EFTFileSpec.MAX_FILE_TRANSACTION_COUNT)}.`
+        `Transaction count exceeds ${String(MAX_FILE_TRANSACTION_COUNT)}.`
       );
     }
 
@@ -248,9 +259,9 @@ export class EFTFileValidator {
       if (transaction.segments.length === 0) {
         throw new Error(`Transaction ${String(transactionIndex)} has no segments.`);
       }
-      if (transaction.segments.length > EFTFileSpec.MAX_SEGMENTS_PER_RECORD) {
+      if (transaction.segments.length > MAX_SEGMENTS_PER_RECORD) {
         throw new Error(
-          `Transaction ${String(transactionIndex)} has more than ${String(EFTFileSpec.MAX_SEGMENTS_PER_RECORD)} segments; split into multiple transactions.`
+          `Transaction ${String(transactionIndex)} has more than ${String(MAX_SEGMENTS_PER_RECORD)} segments; split into multiple transactions.`
         );
       }
 
@@ -264,15 +275,15 @@ export class EFTFileValidator {
             `Segment ${String(segmentIndex)} amount must be positive: ${String(segment.amount)}`
           );
         }
-        if (segment.amount >= EFTFileSpec.MAX_TRANSACTION_AMOUNT) {
+        if (segment.amount >= MAX_TRANSACTION_AMOUNT) {
           throw new Error(
-            `Segment ${String(segmentIndex)} amount exceeds ${String(EFTFileSpec.MAX_TRANSACTION_AMOUNT)}: ${String(segment.amount)}`
+            `Segment ${String(segmentIndex)} amount exceeds ${String(MAX_TRANSACTION_AMOUNT)}: ${String(segment.amount)}`
           );
         }
 
-        if (segment.payeeName.length > EFTFileSpec.FIELD_WIDTHS.payeeName) {
+        if (segment.payeeName.length > FIELD_WIDTHS.payeeName) {
           throw new Error(
-            `payeeName exceeds ${String(EFTFileSpec.FIELD_WIDTHS.payeeName)} characters: ${segment.payeeName}`
+            `payeeName exceeds ${String(FIELD_WIDTHS.payeeName)} characters: ${segment.payeeName}`
           );
         }
         // Note: prohibited characters in payeeName are intentionally
@@ -281,10 +292,10 @@ export class EFTFileValidator {
 
         if (segment.crossReferenceNumber !== undefined) {
           if (
-            segment.crossReferenceNumber.length > EFTFileSpec.FIELD_WIDTHS.crossReference
+            segment.crossReferenceNumber.length > FIELD_WIDTHS.crossReference
           ) {
             throw new Error(
-              `crossReferenceNumber exceeds ${String(EFTFileSpec.FIELD_WIDTHS.crossReference)} characters: ${segment.crossReferenceNumber}`
+              `crossReferenceNumber exceeds ${String(FIELD_WIDTHS.crossReference)} characters: ${segment.crossReferenceNumber}`
             );
           }
           if (containsProhibitedCharacters(segment.crossReferenceNumber)) {

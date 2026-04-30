@@ -30,8 +30,8 @@ export default tseslint.config(
     files: ['**/*.ts'],
     rules: {
       '@typescript-eslint/no-magic-numbers': 'off',
-      // Static-only classes (e.g. EFTFileSpec, BankPADInformation,
-      // CPATransactionCodes) are an intentional grouping pattern in this
+      // Static-only classes (e.g. BankPADInformation, CPATransactionCodes)
+      // are an intentional grouping pattern in this
       // repo — see memory/feedback_class_grouping.md.
       '@typescript-eslint/no-extraneous-class': 'off'
     }

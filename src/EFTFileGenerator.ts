@@ -1,11 +1,12 @@
-import { EFTFileSpec } from '#EFTFileSpec';
 import type { EFTFileBuilder } from '#EFTFileBuilder';
 import { EFTFileLogger } from '#EFTFileLogger';
-import { EFTFileValidator } from '#EFTFileValidator';
+import { EFTFileValidator, RECORD_LENGTH } from '#EFTFileValidator';
 import { RECORD_TYPE, TRANSACTION_TYPE, type EFTTransaction } from '#types';
 import {
   NEWLINE,
+  assertRecordLength,
   containsProhibitedCharacters,
+  fixedField,
   sanitizeCPA005Text,
   toPaddedJulianDate
 } from '#utils';
@@ -513,14 +514,15 @@ export class EFTFileGenerator {
    */
   #assembleRecord(fields: Field[], kind: string): string {
     const record = fields.map((f) =>
-      EFTFileSpec.fixedField(f.value, f.end - f.start + 1, {
+      fixedField(f.value, f.end - f.start + 1, {
         align: f.align,
         pad: f.filler
       })
     );
-    return EFTFileSpec.assertRecordLength(
-      record.join('').padEnd(EFTFileSpec.RECORD_LENGTH, ' '),
-      kind
+    return assertRecordLength(
+      record.join('').padEnd(RECORD_LENGTH, ' '),
+      kind,
+      RECORD_LENGTH
     );
   }
 }

@@ -1,5 +1,10 @@
 export const NEWLINE = '\r';
 
+interface FixedFieldOpts {
+  align: 'left' | 'right';
+  pad: ' ' | '0';
+}
+
 const MILLISECONDS_PER_DAY = 86_400_000;
 
 // Input characters allowed before uppercasing. Lowercase ASCII letters are
@@ -18,6 +23,43 @@ export function containsProhibitedCharacters(input: string): boolean {
 
 export function sanitizeCPA005Text(input: string): string {
   return input.toUpperCase().replaceAll(PROHIBITED_OUTPUT_CHARACTERS_GLOBAL, ' ');
+}
+
+/**
+ * Pad a value to a fixed width. Throws if the value already exceeds the
+ * width so calculation bugs surface at the offending field instead of
+ * silently truncating or producing an oversized record.
+ */
+export function fixedField(
+  value: string,
+  width: number,
+  opts: FixedFieldOpts
+): string {
+  if (value.length > width) {
+    throw new Error(
+      `CPA-005 field overflow: value of length ${String(value.length)} exceeds width ${String(width)} (value: "${value}")`
+    );
+  }
+  return opts.align === 'left'
+    ? value.padEnd(width, opts.pad)
+    : value.padStart(width, opts.pad);
+}
+
+/**
+ * Assert a fully-assembled logical record is exactly the expected length.
+ * Returns the record unchanged for chaining.
+ */
+export function assertRecordLength(
+  record: string,
+  kind: string,
+  expectedLength: number
+): string {
+  if (record.length !== expectedLength) {
+    throw new Error(
+      `CPA-005 ${kind} record length is ${String(record.length)}, expected ${String(expectedLength)}`
+    );
+  }
+  return record;
 }
 
 /**

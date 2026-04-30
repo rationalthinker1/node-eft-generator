@@ -1,6 +1,12 @@
 export { EFTFileBuilder } from '#EFTFileBuilder';
-export { EFTFileValidator } from '#EFTFileValidator';
-export { EFTFileSpec } from '#EFTFileSpec';
+export {
+  FIELD_WIDTHS,
+  EFTFileValidator,
+  MAX_FILE_TRANSACTION_COUNT,
+  MAX_SEGMENTS_PER_RECORD,
+  MAX_TRANSACTION_AMOUNT,
+  RECORD_LENGTH
+} from '#EFTFileValidator';
 export { EFTFileLogger } from '#EFTFileLogger';
 export type {
   HeaderLogContext,
