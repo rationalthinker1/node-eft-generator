@@ -390,9 +390,9 @@ const cpaTransactionCodesFederal = {
     cpaCodeAbbreviationFrench: 'AGR'
   },
   302: {
-    cpaCodeFullName: 'AgriInvest',
-    cpaCodeAbbreviationEnglish: 'AGI',
-    cpaCodeAbbreviationFrench: 'AGI'
+    cpaCodeFullName: 'Canadian Dairy Commission',
+    cpaCodeAbbreviationEnglish: 'CDC',
+    cpaCodeAbbreviationFrench: 'CCL'
   },
   303: {
     cpaCodeFullName: 'HRDC - Training',
@@ -425,9 +425,14 @@ const cpaTransactionCodesFederal = {
     cpaCodeAbbreviationFrench: 'AAC'
   },
   313: {
-    cpaCodeFullName: 'VAC',
-    cpaCodeAbbreviationEnglish: 'VAC',
-    cpaCodeAbbreviationFrench: 'ACC'
+    cpaCodeFullName: 'Canadian Pension Commission',
+    cpaCodeAbbreviationEnglish: 'CPC',
+    cpaCodeAbbreviationFrench: 'CCP'
+  },
+  314: {
+    cpaCodeFullName: 'Family Allowances',
+    cpaCodeAbbreviationEnglish: 'FAL',
+    cpaCodeAbbreviationFrench: 'AFA'
   },
   315: {
     cpaCodeFullName: 'PS Superannuation',
@@ -450,7 +455,7 @@ const cpaTransactionCodesFederal = {
     cpaCodeAbbreviationFrench: 'AE'
   },
   319: {
-    cpaCodeFullName: 'PAD CCRA',
+    cpaCodeFullName: 'Dbt CCRA Government of Canada',
     cpaCodeAbbreviationEnglish: 'TXD',
     cpaCodeAbbreviationFrench: 'DIM'
   },
@@ -470,7 +475,7 @@ const cpaTransactionCodesFederal = {
     cpaCodeAbbreviationFrench: 'EXT'
   },
   323: {
-    cpaCodeFullName: 'Savings Plan',
+    cpaCodeFullName: 'Canada Savings Plan',
     cpaCodeAbbreviationEnglish: 'CSP',
     cpaCodeAbbreviationFrench: 'PEC'
   },
@@ -508,12 +513,12 @@ const cpaTransactionCodesProvincialLocal = {
     cpaCodeAbbreviationFrench: 'PSR'
   },
   604: {
-    cpaCodeFullName: 'Family Benefit',
+    cpaCodeFullName: 'Provincial Family Benefits',
     cpaCodeAbbreviationEnglish: 'PFB',
     cpaCodeAbbreviationFrench: 'PFA'
   },
   605: {
-    cpaCodeFullName: 'Prov./Terr.',
+    cpaCodeFullName: 'Combined Fed-Prov/Terr Payment',
     cpaCodeAbbreviationEnglish: 'FPT',
     cpaCodeAbbreviationFrench: 'FPT'
   },
@@ -533,7 +538,7 @@ const cpaTransactionCodesProvincialLocal = {
     cpaCodeAbbreviationFrench: 'RAA'
   },
   609: {
-    cpaCodeFullName: 'Health Care Premium',
+    cpaCodeFullName: 'Provincial Health Care Premium',
     cpaCodeAbbreviationEnglish: 'PHC',
     cpaCodeAbbreviationFrench: 'FAM'
   },
@@ -579,7 +584,20 @@ const cpaTransactionCodesProvincialLocal = {
   }
 } as const satisfies Record<CPACodeNumber, CPACode>;
 
+const cpaTransactionCodesInterFI = {
+  650: {
+    cpaCodeFullName: 'Inter-FI Funds Transfer Debit',
+    cpaCodeAbbreviationEnglish: 'IFD',
+    cpaCodeAbbreviationFrench: 'DIF'
+  }
+} as const satisfies Record<CPACodeNumber, CPACode>;
+
 const cpaTransactionCodesCommercial = {
+  700: {
+    cpaCodeFullName: 'Business PAD',
+    cpaCodeAbbreviationEnglish: 'BPD',
+    cpaCodeAbbreviationFrench: 'DPA'
+  },
   701: {
     cpaCodeFullName: 'Commercial Investments',
     cpaCodeAbbreviationEnglish: 'CIV',
@@ -741,6 +759,7 @@ const cpaTransactionCodes = {
   ...cpaTransactionCodesPreauthorized,
   ...cpaTransactionCodesFederal,
   ...cpaTransactionCodesProvincialLocal,
+  ...cpaTransactionCodesInterFI,
   ...cpaTransactionCodesCommercial
 } as const satisfies Record<CPACodeNumber, CPACode>;
 
@@ -753,6 +772,159 @@ export type CPATransactionCode = `${CPATransactionCodeKey}`;
 export class CPATransactionCodes {
   /** All recognised CPA-005 transaction codes keyed by their numeric value. */
   static readonly all = frozenCPATransactionCodes;
+
+  static readonly PAYROLL_DEPOSIT = '200';
+  static readonly SPECIAL_PAYROLL = '201';
+  static readonly VACATION_PAYROLL = '202';
+  static readonly OVERTIME_PAYROLL = '203';
+  static readonly ADVANCE_PAYROLL = '204';
+  static readonly COMMISSION_PAYROLL = '205';
+  static readonly BONUS_PAYROLL = '206';
+  static readonly ADJUSTMENT_PAYROLL = '207';
+  static readonly PENSION = '230';
+  static readonly FEDERAL_PENSION = '231';
+  static readonly PROVINCIAL_PENSION = '232';
+  static readonly PRIVATE_PENSION = '233';
+  static readonly ANNUITY = '240';
+  static readonly DIVIDEND = '250';
+  static readonly COMMON_DIVIDEND = '251';
+  static readonly PREFERRED_DIVIDEND = '252';
+  static readonly INVESTMENT = '260';
+  static readonly MUTUAL_FUNDS = '261';
+  static readonly SPOUSAL_RSP_CONTRIBUTION = '265';
+  static readonly RESP_CONTRIBUTION = '266';
+  static readonly RSP_CONTRIBUTION = '271';
+  static readonly RETIREMENT_INCOME_FUND = '272';
+  static readonly TAX_FREE_SAVINGS_ACCOUNT = '273';
+  static readonly RDSP_CONTRIBUTION = '274';
+  static readonly INTEREST = '280';
+  static readonly LOTTERY_PRIZE_PAYMENT = '281';
+  static readonly INSURANCE = '330';
+  static readonly LIFE_INSURANCE = '331';
+  static readonly AUTO_INSURANCE = '332';
+  static readonly PROPERTY_INSURANCE = '333';
+  static readonly CASUALTY_INSURANCE = '334';
+  static readonly MORTGAGE_INSURANCE = '335';
+  static readonly HEALTH_DENTAL_CLAIM_INSURANCE = '336';
+  static readonly LOAN = '350';
+  static readonly PERSONAL_LOAN = '351';
+  static readonly DEALER_PLAN_LOAN = '352';
+  static readonly FARM_IMPROVEMENT_LOAN = '353';
+  static readonly HOME_IMPROVEMENT_LOAN = '354';
+  static readonly TERM_LOAN = '355';
+  static readonly INSURANCE_LOAN = '356';
+  static readonly MORTGAGE = '370';
+  static readonly RESIDENTIAL_MORTGAGE = '371';
+  static readonly PREAUTHORIZED_COMMERCIAL_MORTGAGE = '372';
+  static readonly FARM_MORTGAGE = '373';
+  static readonly TAX = '380';
+  static readonly INCOME_TAX = '381';
+  static readonly SALES_TAX = '382';
+  static readonly CORPORATE_TAX = '383';
+  static readonly SCHOOL_TAX = '384';
+  static readonly PROPERTY_TAX = '385';
+  static readonly WATER_TAX = '386';
+  static readonly RENT = '400';
+  static readonly RESIDENTIAL_RENT = '401';
+  static readonly PREAUTHORIZED_COMMERCIAL_RENT = '402';
+  static readonly EQUIPMENT_RENT = '403';
+  static readonly AUTOMOBILE_RENT = '404';
+  static readonly APPLIANCE_RENT = '405';
+  static readonly CASH_MANAGEMENT = '420';
+  static readonly BILL_PAYMENT = '430';
+  static readonly TELEPHONE_BILL = '431';
+  static readonly GASOLINE_BILL = '432';
+  static readonly HYDRO_BILL = '433';
+  static readonly CABLE_BILL = '434';
+  static readonly FUEL_BILL = '435';
+  static readonly UTILITY_BILL = '436';
+  static readonly INTERNET_ACCESS = '437';
+  static readonly WATER_BILL = '438';
+  static readonly AUTO_PAYMENT = '439';
+  static readonly MISC_PAYMENT = '450';
+  static readonly CUSTOMER_CHEQUE = '451';
+  static readonly EXPENSE_PAYMENT = '452';
+  static readonly BILL_PAYMENT_ERROR_CORRECTION = '453';
+  static readonly ACCOUNTS_PAYABLE = '460';
+  static readonly FEE = '470';
+  static readonly DONATION = '480';
+
+  static readonly FEDERAL_PAYMENT = '300';
+  static readonly AGRI_STABILIZATION = '301';
+  static readonly CANADIAN_DAIRY_COMMISSION = '302';
+  static readonly HRDC_TRAINING = '303';
+  static readonly CANADA_CHILD_BENEFIT = '308';
+  static readonly GST = '309';
+  static readonly CPP = '310';
+  static readonly OLD_AGE_SECURITY = '311';
+  static readonly WAR_VETERANS_ALLOWANCE = '312';
+  static readonly CANADIAN_PENSION_COMMISSION = '313';
+  static readonly FAMILY_ALLOWANCES = '314';
+  static readonly PS_SUPERANNUATION = '315';
+  static readonly CF_SUPERANNUATION = '316';
+  static readonly FEDERAL_TAX_REFUND = '317';
+  static readonly EI = '318';
+  static readonly CCRA_DEBIT = '319';
+  static readonly FEDERAL_STUDENT_LOAN = '320';
+  static readonly CSB_INTEREST = '321';
+  static readonly EXTERNAL_AFFAIRS = '322';
+  static readonly CANADA_SAVINGS_PLAN = '323';
+  static readonly ACCESS_GRANT = '324';
+  static readonly CANADA_CARBON_REBATE = '325';
+
+  static readonly PROVINCIAL_LOCAL_GOVERNMENT_PAYMENT = '600';
+  static readonly FAMILY_SUPPORT_PLAN = '601';
+  static readonly HOUSING_ALLOWANCE = '602';
+  static readonly INCOME_SECURITY_BENEFIT = '603';
+  static readonly PROVINCIAL_FAMILY_BENEFITS = '604';
+  static readonly FED_PROV_TERR_PAYMENT = '605';
+  static readonly WORKERS_COMPENSATION_BOARD = '606';
+  static readonly EMPLOYMENT_ASSISTANCE_ALLOWANCE = '607';
+  static readonly AUTOMOBILE_INSURANCE_PLAN = '608';
+  static readonly PROVINCIAL_HEALTH_CARE_PREMIUM = '609';
+  static readonly OFFENCES_AND_FINES = '610';
+  static readonly DISABILITY_PAYMENT = '611';
+  static readonly PARENTAL_INSURANCE = '612';
+  static readonly PROVINCIAL_STUDENT_LOAN = '613';
+  static readonly GRANT_BURSARY = '614';
+  static readonly SOLIDARITY_TAX_CREDIT = '615';
+  static readonly CHILDREN_ASSISTANCE = '616';
+  static readonly PROVINCIAL_TAX_REFUND = '617';
+
+  static readonly INTER_FI_FUNDS_TRANSFER_DEBIT = '650';
+
+  static readonly BUSINESS_PAD = '700';
+  static readonly COMMERCIAL_INVESTMENT = '701';
+  static readonly COMMERCIAL_INSURANCE = '702';
+  static readonly COMMERCIAL_AUTO_INSURANCE = '703';
+  static readonly COMMERCIAL_PROPERTY_INSURANCE = '704';
+  static readonly COMMERCIAL_CASUALTY_INSURANCE = '705';
+  static readonly COMMERCIAL_MORTGAGE_INSURANCE = '706';
+  static readonly COMMERCIAL_LOAN = '707';
+  static readonly COMMERCIAL_MORTGAGE = '708';
+  static readonly COMMERCIAL_TAX = '709';
+  static readonly COMMERCIAL_INCOME_TAX = '710';
+  static readonly COMMERCIAL_SALES_TAX = '711';
+  static readonly COMMERCIAL_GST = '712';
+  static readonly COMMERCIAL_PROPERTY_TAX = '713';
+  static readonly COMMERCIAL_RENT = '714';
+  static readonly COMMERCIAL_EQUIPMENT_RENT = '715';
+  static readonly COMMERCIAL_AUTOMOBILE_RENT = '716';
+  static readonly COMMERCIAL_CASH_MANAGEMENT = '717';
+  static readonly COMMERCIAL_BILL_PAYMENT = '718';
+  static readonly COMMERCIAL_TELEPHONE_BILL = '719';
+  static readonly COMMERCIAL_GASOLINE_BILL = '720';
+  static readonly COMMERCIAL_HYDRO_BILL = '721';
+  static readonly COMMERCIAL_CABLE_BILL = '722';
+  static readonly COMMERCIAL_FUEL_BILL = '723';
+  static readonly COMMERCIAL_UTILITY_BILL = '724';
+  static readonly COMMERCIAL_INTERNET_BILL = '725';
+  static readonly COMMERCIAL_WATER_BILL = '726';
+  static readonly COMMERCIAL_AUTO_PAYMENT = '727';
+  static readonly COMMERCIAL_EXPENSE_PAYMENT = '728';
+  static readonly COMMERCIAL_ACCOUNTS_PAYABLE = '729';
+  static readonly COMMERCIAL_FEE = '730';
+  static readonly COMMERCIAL_CREDITOR_INSURANCE = '731';
 
   /** Type guard for whether a string is a recognised CPA transaction code. */
   static is(cpaCode: string): cpaCode is CPATransactionCode {

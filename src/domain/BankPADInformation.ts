@@ -24,36 +24,38 @@ const ACCOUNT_PATTERN = /^\d{5,12}$/;
 
 /**
  * Recognised Canadian 3-digit financial institution numbers, as
- * published by Payments Canada. Add to this set when onboarding a new FI.
+ * published by Payments Canada. Add to this map when onboarding a new FI.
  */
-const VALID_INSTITUTIONS: ReadonlySet<string> = new Set([
-  '001', // BMO
-  '002', // Scotia
-  '003', // RBC
-  '004', // TD
-  '006', // National Bank
-  '010', // CIBC
-  '016', // HSBC
-  '030', // Canadian Western
-  '039', // Laurentian
-  '177', // Bank of Canada
-  '219', // ATB Financial
-  '260', // Citibank Canada
-  '326', // PC Financial
-  '338', // Canadian Tire Bank
-  '340', // ICICI
-  '352', // Manulife Bank
-  '540', // Manulife Bank
-  '614', // ICICI
-  '809', // Central 1 (BC/ON)
-  '815', // Caisse Pop. (Desjardins)
-  '828', // Central 1 - ON CUs
-  '829', // Desjardins
-  '837', // Meridian / OEECU
-  '839', // Heritage CU
-  '849', // Caisses populaires acadiennes
-  '879' // Various credit unions
-]);
+export const BankInstitution = Object.freeze({
+  BMO: '001' as BankInstitution,
+  Scotia: '002' as BankInstitution,
+  RBC: '003' as BankInstitution,
+  TD: '004' as BankInstitution,
+  NationalBank: '006' as BankInstitution,
+  CIBC: '010' as BankInstitution,
+  HSBC: '016' as BankInstitution,
+  CanadianWestern: '030' as BankInstitution,
+  Laurentian: '039' as BankInstitution,
+  BankOfCanada: '177' as BankInstitution,
+  ATBFinancial: '219' as BankInstitution,
+  CitibankCanada: '260' as BankInstitution,
+  PCFinancial: '326' as BankInstitution,
+  CanadianTireBank: '338' as BankInstitution,
+  ICICI: '340' as BankInstitution,
+  ManulifeBank: '352' as BankInstitution,
+  ManulifeBank_540: '540' as BankInstitution,
+  ICICI_614: '614' as BankInstitution,
+  Central1BCON: '809' as BankInstitution,
+  CaissePopDesjardins: '815' as BankInstitution,
+  Central1ONCUs: '828' as BankInstitution,
+  Desjardins: '829' as BankInstitution,
+  MeridianOEECU: '837' as BankInstitution,
+  HeritageCU: '839' as BankInstitution,
+  CaissesPopulairesAcadiennes: '849' as BankInstitution,
+  VariousCreditUnions: '879' as BankInstitution
+});
+
+const VALID_INSTITUTIONS: ReadonlySet<string> = new Set(Object.values(BankInstitution));
 
 export class BankPADInformation {
   /**
