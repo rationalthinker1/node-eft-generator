@@ -188,11 +188,14 @@ export class Header implements Printable, Loggable, Validable {
   }
 
   log(): void {
+    const cfg = this.#builder.getConfiguration();
     const julian = formatField(this, Header, 'fileCreationDate');
     const dayOfYear = julian.slice(3);
 
     Logger.title('HEADER');
     Logger.row('originator', `<b>${this.originatorId}</b>`);
+    Logger.row('short name', `<b>${cfg.originatorShortName}</b>`);
+    Logger.row('long name', `<b>${cfg.originatorLongName}</b>`);
     Logger.row('fcn', `<b>${this.fileCreationNumber}</b>`);
     Logger.row(
       'created',
