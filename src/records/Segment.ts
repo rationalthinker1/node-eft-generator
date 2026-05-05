@@ -122,7 +122,26 @@ export class Segment implements Printable, Loggable, Validable {
     end: 110,
     pad: ' ',
     align: 'left',
-    transform: (v) => sanitizeCPA005Text(v as string),
+    transform: (v) => {
+      let name = sanitizeCPA005Text(v as string);
+      while (name.length > SEGMENT_FIELD_WIDTHS.payeeName) {
+        const parts = name.split(' ');
+        const [first, second, third] = parts;
+        if (parts.length === 3 && first && third) {
+          name = `${first} ${third}`;
+        } else if (
+          parts.length === 2 &&
+          first &&
+          second &&
+          first.length + 2 <= SEGMENT_FIELD_WIDTHS.payeeName
+        ) {
+          name = `${first} ${second.slice(0, 1)}`;
+        } else {
+          name = name.slice(0, SEGMENT_FIELD_WIDTHS.payeeName);
+        }
+      }
+      return name;
+    },
     validate: (value) => {
       if (value.length > SEGMENT_FIELD_WIDTHS.payeeName) {
         throw new Error(
@@ -278,6 +297,14 @@ export class Segment implements Printable, Loggable, Validable {
       console.warn(
         Logger.format(
           `<yellow>  ⚠  payeeName contains prohibited characters and will be sanitized: ${this.payeeName}</yellow>`
+        )
+      );
+    }
+
+    if (this.payeeName.length > SEGMENT_FIELD_WIDTHS.payeeName) {
+      console.warn(
+        Logger.format(
+          `<yellow>  ⚠  payeeName "${this.payeeName}" was shortened to "${payee.trimEnd()}" to fit ${String(SEGMENT_FIELD_WIDTHS.payeeName)} characters</yellow>`
         )
       );
     }

@@ -2,10 +2,17 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import { describe, it } from 'node:test';
 
-import { BankPADInformation, EFTFileBuilder, EFTFileValidator } from '#index';
+import {
+  BankPADInformation,
+  EFTFileBuilder,
+  EFTFileValidator,
+  Segment,
+  Transaction
+} from '#index';
 import { RECORD_TYPE, TRANSACTION_TYPE, type EFTConfiguration } from '#types';
 import type { CPATransactionCode } from '#domain/CPACodes';
 import { NEWLINE as cpa005_newline } from '#utils/index';
+import { formatField } from '#Field';
 
 const { bankAccount, bankInstitution, bankTransit } = BankPADInformation;
 
@@ -351,7 +358,7 @@ await describe('eft-generator - CPA-005', async () => {
       });
     });
 
-    await it('throws when payeeName exceeds 30 characters', () => {
+    await it('truncates payeeName when it exceeds 30 characters', () => {
       const eftGenerator = new EFTFileBuilder(config);
       eftGenerator.addCreditTransaction({
         ...validBank,
@@ -359,9 +366,14 @@ await describe('eft-generator - CPA-005', async () => {
         amount: 100,
         cpaCode: cpaCodePropertyTaxes
       });
-      assert.throws(() => {
-        eftGenerator.generate();
-      }, /payeeName exceeds/);
+      eftGenerator.generate();
+      const lines = eftGenerator.getLines();
+      const tx = lines?.[1] as Transaction;
+      assert.equal(lines?.[1] instanceof Transaction, true);
+      const segment = tx.segments[0];
+      assert.ok(segment);
+      const payeeName = formatField(segment, Segment, 'payeeName');
+      assert.equal(payeeName, 'THIS PAYEE NAME IS TOO LONG AN');
     });
 
     await it('warns and sanitizes when payeeName contains prohibited characters', () => {

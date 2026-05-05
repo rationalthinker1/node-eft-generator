@@ -64,7 +64,7 @@ export interface EFTTransaction {
    */
   recordType: TransactionType;
 
-  segments: EFTTransactionSegment[];
+  segments: Array<EFTTransactionSegment>;
 }
 
 export interface EFTTransactionSegment {

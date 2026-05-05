@@ -55,7 +55,7 @@ export class Transaction implements Printable, Loggable, Validable {
   @Field({ start: 21, end: 24, pad: '0', align: 'right' })
   fileCreationNumber!: string;
 
-  segments!: Segment[];
+  segments!: Array<Segment>;
 
   constructor(builder: EFTFileBuilder, tx: EFTTransaction, recordNumber: number) {
     const cfg = builder.getConfiguration();

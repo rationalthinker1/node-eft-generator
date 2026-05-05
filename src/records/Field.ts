@@ -33,7 +33,7 @@ interface DecoratedField extends FieldSpec {
  * Anything class-like — what `getFields` accepts and what `target.constructor`
  * resolves to inside the property decorator.
  */
-export type Ctor = abstract new (...args: never[]) => unknown;
+export type Ctor = abstract new (...args: Array<never>) => unknown;
 
 const FIELDS_KEY = Symbol('cpa005:fields');
 
@@ -45,7 +45,9 @@ const FIELDS_KEY = Symbol('cpa005:fields');
 export function Field(spec: FieldSpec): PropertyDecorator {
   return (target, propertyKey) => {
     const ctor = target.constructor;
-    const own = Reflect.getOwnMetadata(FIELDS_KEY, ctor) as DecoratedField[] | undefined;
+    const own = Reflect.getOwnMetadata(FIELDS_KEY, ctor) as
+      | Array<DecoratedField>
+      | undefined;
     const fields = own ?? [];
     fields.push({ ...spec, propertyKey: propertyKey as string });
     Reflect.defineMetadata(FIELDS_KEY, fields, ctor);
@@ -57,8 +59,10 @@ export function Field(spec: FieldSpec): PropertyDecorator {
  * caller can concatenate field renders without thinking about decoration
  * order.
  */
-export function getFields(ctor: Ctor): DecoratedField[] {
-  const fields = Reflect.getOwnMetadata(FIELDS_KEY, ctor) as DecoratedField[] | undefined;
+export function getFields(ctor: Ctor): Array<DecoratedField> {
+  const fields = Reflect.getOwnMetadata(FIELDS_KEY, ctor) as
+    | Array<DecoratedField>
+    | undefined;
   if (!fields) return [];
   return [...fields].sort((a, b) => a.start - b.start);
 }
@@ -101,7 +105,7 @@ export function formatField<T extends Ctor>(
  * 240-char segments before padding to 1464).
  */
 export function renderFields(instance: object, ctor: Ctor): string {
-  const parts: string[] = [];
+  const parts: Array<string> = [];
   for (const f of getFields(ctor)) {
     const value = resolveFieldValue(f, instance);
     const width = f.end - f.start + 1;

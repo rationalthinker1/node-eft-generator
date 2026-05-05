@@ -45,7 +45,7 @@ eftFile.addDebitTransaction({
 
 // `generate()` runs the strict validator first; any spec violation
 // throws before any output is written.
-const output = eftFile.generate()
+const [output] = eftFile.generate()
 
 fs.writeFileSync('cpa005.txt', output)
 ```

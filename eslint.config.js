@@ -33,7 +33,8 @@ export default tseslint.config(
       // Static-only classes (e.g. BankPADInformation, CPATransactionCodes)
       // are an intentional grouping pattern in this
       // repo — see memory/feedback_class_grouping.md.
-      '@typescript-eslint/no-extraneous-class': 'off'
+      '@typescript-eslint/no-extraneous-class': 'off',
+      '@typescript-eslint/array-type': ['error', { default: 'generic' }]
     }
   }
 );

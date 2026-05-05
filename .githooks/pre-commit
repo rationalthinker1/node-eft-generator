@@ -1,5 +1,13 @@
 #!/bin/sh
 set -e
 
+STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR -- '*.ts')
+if [ -n "$STAGED_TS" ]; then
+  echo "Auto-fixing staged TypeScript files (eslint --fix, prettier --write)..."
+  echo "$STAGED_TS" | xargs -d '\n' yarn eslint --fix
+  echo "$STAGED_TS" | xargs -d '\n' yarn prettier --write
+  echo "$STAGED_TS" | xargs -d '\n' git add
+fi
+
 echo "Running pre-commit CI check..."
 yarn ci:check

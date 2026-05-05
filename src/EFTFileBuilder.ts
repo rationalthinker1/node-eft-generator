@@ -12,12 +12,14 @@ import { NEWLINE } from '#utils/index';
 
 export class EFTFileBuilder {
   readonly #config: EFTConfiguration;
-  readonly #transactions: EFTTransaction[];
+  readonly #transactions: Array<EFTTransaction>;
+  #lines: Array<Header | Transaction | Trailer>;
   readonly #validator: EFTFileValidator;
 
   constructor(config: EFTConfiguration) {
     this.#config = config;
     this.#transactions = [];
+    this.#lines = [];
     this.#validator = new EFTFileValidator(this);
   }
 
@@ -43,7 +45,7 @@ export class EFTFileBuilder {
     });
   }
 
-  getTransactions(): EFTTransaction[] {
+  getTransactions(): Array<EFTTransaction> {
     return this.#transactions;
   }
 
@@ -55,15 +57,14 @@ export class EFTFileBuilder {
   generate(): string {
     this.#validator.validate();
 
-    const lines: string[] = [];
-    lines.push(new Header(this).print());
+    this.#lines.push(new Header(this));
     for (const [index, tx] of this.#transactions.entries()) {
       const recordNumber = index + 2; // header is record 1
-      lines.push(new Transaction(this, tx, recordNumber).print());
+      this.#lines.push(new Transaction(this, tx, recordNumber));
     }
-    lines.push(new Trailer(this).print());
+    this.#lines.push(new Trailer(this));
 
-    const output = lines.join(NEWLINE);
+    const output = this.#lines.map((line) => line.print()).join(NEWLINE);
     this.#validator.validateFile(output);
     return output;
   }
@@ -74,5 +75,9 @@ export class EFTFileBuilder {
    */
   validate(): void {
     this.#validator.validate();
+  }
+
+  getLines() {
+    return this.#lines;
   }
 }

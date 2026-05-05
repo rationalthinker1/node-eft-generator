@@ -58,7 +58,7 @@ export class Logger {
    * print. Useful for `console.warn` and other non-stdout sinks.
    */
   static format(template: string): string {
-    const stack: string[] = [];
+    const stack: Array<string> = [];
     return template.replace(
       /<(\/?)([a-z]+)>/g,
       (literal: string, slash: string, tag: string): string => {
