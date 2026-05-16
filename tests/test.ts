@@ -111,7 +111,7 @@ await describe('eft-generator - CPA-005', async () => {
       eftGenerator.validate();
     });
 
-    const output = eftGenerator.generate();
+    const { output } = eftGenerator.generate();
 
     fs.writeFileSync('tests/output/cpa005.txt', output);
 
@@ -385,9 +385,10 @@ await describe('eft-generator - CPA-005', async () => {
         cpaCode: cpaCodePropertyTaxes
       });
 
-      const { result: output, warnings } = captureConsoleWarn(() =>
-        eftGenerator.generate()
-      );
+      const {
+        result: { output },
+        warnings
+      } = captureConsoleWarn(() => eftGenerator.generate());
 
       assert.match(warnings.join('\n'), /payeeName contains prohibited characters/);
       assert.match(output, /INVALID  PAYEE  NAME/);
@@ -520,7 +521,7 @@ await describe('eft-generator - CPA-005', async () => {
         payeeName: 'TEST PAYEE'
       });
 
-      const output = eftGenerator.generate();
+      const { output } = eftGenerator.generate();
 
       assert.ok(!output.includes('\n'), 'output must not contain LF (0x0A)');
       assert.ok(output.includes('\r'), 'output must use CR (0x0D) as delimiter');
@@ -540,7 +541,7 @@ await describe('eft-generator - CPA-005', async () => {
         payeeName: 'TEST PAYEE'
       });
 
-      const output = eftGenerator.generate();
+      const { output } = eftGenerator.generate();
 
       // Allowed: 0-9, A-Z, blank, = _ $ . & * , plus CR record delimiter
       assert.match(output, /^[0-9A-Z =_$.&*,\r]*$/);
@@ -588,9 +589,10 @@ await describe('eft-generator - CPA-005', async () => {
         payeeName: 'ELISSA GOLDSTEIN-KRUPSKI'
       });
 
-      const { result: output, warnings } = captureConsoleWarn(() =>
-        eftGenerator.generate()
-      );
+      const {
+        result: { output },
+        warnings
+      } = captureConsoleWarn(() => eftGenerator.generate());
 
       assert.match(warnings.join('\n'), /payeeName contains prohibited characters/);
       assert.match(output, /ELISSA GOLDSTEIN KRUPSKI/);
@@ -628,7 +630,7 @@ await describe('eft-generator - CPA-005', async () => {
         amount: 200,
         payeeName: 'TEST PAYOR'
       });
-      return eftGenerator.generate();
+      return eftGenerator.generate().output;
     }
 
     await it('C record field 13 (positions 165-174) is 10 blanks (spec page 60)', () => {
@@ -687,7 +689,7 @@ await describe('eft-generator - CPA-005', async () => {
     });
 
     await it('throws when output contains LF', () => {
-      const valid = builderWithOneTransaction().generate();
+      const { output: valid } = builderWithOneTransaction().generate();
       const tampered = valid.replace('\r', '\r\n');
       assert.throws(
         () => validatorFor(builderWithOneTransaction()).validateFile(tampered),
@@ -698,7 +700,7 @@ await describe('eft-generator - CPA-005', async () => {
     await it('throws when fewer than 3 records', () => {
       // header + trailer only (no transaction).
       const headerOnlyBuilder = builderWithOneTransaction();
-      const valid = headerOnlyBuilder.generate();
+      const { output: valid } = headerOnlyBuilder.generate();
       const lines = valid.split('\r');
       const headerAndTrailer = [lines[0], lines.at(-1)].join('\r');
       assert.throws(
@@ -709,7 +711,7 @@ await describe('eft-generator - CPA-005', async () => {
 
     await it('passes when transaction record is exactly 1464 chars', () => {
       const builder = builderWithOneTransaction();
-      const valid = builder.generate();
+      const { output: valid } = builder.generate();
       const lines = valid.split('\r');
       assert.strictEqual((lines[1] ?? '').length, 1464);
       assert.doesNotThrow(() => {
@@ -718,7 +720,7 @@ await describe('eft-generator - CPA-005', async () => {
     });
 
     await it('throws when transaction record is 1463 chars (one short)', () => {
-      const valid = builderWithOneTransaction().generate();
+      const { output: valid } = builderWithOneTransaction().generate();
       const lines = valid.split('\r');
       lines[1] = (lines[1] ?? '').slice(0, 1463);
       const tampered = lines.join('\r');
@@ -729,7 +731,7 @@ await describe('eft-generator - CPA-005', async () => {
     });
 
     await it('throws when transaction record is 1465 chars (one long)', () => {
-      const valid = builderWithOneTransaction().generate();
+      const { output: valid } = builderWithOneTransaction().generate();
       const lines = valid.split('\r');
       lines[1] = (lines[1] ?? '') + ' ';
       const tampered = lines.join('\r');
@@ -740,7 +742,7 @@ await describe('eft-generator - CPA-005', async () => {
     });
 
     await it('throws when a record is catastrophically truncated', () => {
-      const valid = builderWithOneTransaction().generate();
+      const { output: valid } = builderWithOneTransaction().generate();
       const lines = valid.split('\r');
       lines[1] = (lines[1] ?? '').slice(0, 100);
       const tampered = lines.join('\r');
@@ -751,7 +753,7 @@ await describe('eft-generator - CPA-005', async () => {
     });
 
     await it('throws when a record contains a prohibited character', () => {
-      const valid = builderWithOneTransaction().generate();
+      const { output: valid } = builderWithOneTransaction().generate();
       const lines = valid.split('\r');
       // Replace one char in the transaction line with a lowercase letter.
       const original = lines[1] ?? '';
@@ -764,7 +766,7 @@ await describe('eft-generator - CPA-005', async () => {
     });
 
     await it('throws when first record is not the header', () => {
-      const valid = builderWithOneTransaction().generate();
+      const { output: valid } = builderWithOneTransaction().generate();
       const lines = valid.split('\r');
       // Swap the first character of the header from 'A' to 'X'.
       const header = lines[0] ?? '';
@@ -777,7 +779,7 @@ await describe('eft-generator - CPA-005', async () => {
     });
 
     await it('throws when last record is not the trailer', () => {
-      const valid = builderWithOneTransaction().generate();
+      const { output: valid } = builderWithOneTransaction().generate();
       const lines = valid.split('\r');
       const trailer = lines.at(-1) ?? '';
       lines[lines.length - 1] = 'X' + trailer.slice(1);
@@ -789,7 +791,7 @@ await describe('eft-generator - CPA-005', async () => {
     });
 
     await it('throws when trailer record count does not match line count', () => {
-      const valid = builderWithOneTransaction().generate();
+      const { output: valid } = builderWithOneTransaction().generate();
       const lines = valid.split('\r');
       const trailer = lines.at(-1) ?? '';
       // Trailer record count field is at positions 2-10 (slice(1, 10)).
@@ -804,7 +806,7 @@ await describe('eft-generator - CPA-005', async () => {
 
     await it('passes for output produced by generate()', () => {
       const builder = builderWithOneTransaction();
-      const output = builder.generate();
+      const { output } = builder.generate();
       assert.doesNotThrow(() => {
         validatorFor(builder).validateFile(output);
       });
@@ -814,7 +816,7 @@ await describe('eft-generator - CPA-005', async () => {
   await describe('Julian date formatting', async () => {
     // Header positions 24-29 (0-indexed) are the file creation date in 0YYDDD format.
     function headerCreationDate(eftGenerator: EFTFileBuilder): string {
-      return eftGenerator.generate().slice(24, 30);
+      return eftGenerator.generate().output.slice(24, 30);
     }
 
     await it('Formats January 1 as day 001', () => {

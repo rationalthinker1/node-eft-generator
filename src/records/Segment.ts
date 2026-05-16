@@ -5,7 +5,13 @@ import type {
 } from '#domain/BankPADInformation';
 import type { CPATransactionCode } from '#domain/CPACodes';
 import type { EFTFileBuilder } from '#EFTFileBuilder';
-import { Field, formatField, renderFields, validateFields } from '#records/Field';
+import {
+  collectFieldValues,
+  Field,
+  formatField,
+  renderFields,
+  validateFields
+} from '#records/Field';
 import { Logger } from '#utils/Logger';
 import {
   TRANSACTION_TYPE,
@@ -13,10 +19,12 @@ import {
   type Loggable,
   type Printable,
   type Validable,
-  type TransactionType
+  type TransactionType,
+  UsesFields
 } from '#types';
 import {
   assertRecordLength,
+  ClassField,
   containsProhibitedCharacters,
   MILLISECONDS_PER_DAY,
   sanitizeCPA005Text,
@@ -24,6 +32,14 @@ import {
 } from '#utils/index';
 
 const SEGMENT_LENGTH = 240;
+
+type SegmentContextField =
+  | 'recordType'
+  | 'recordNumber'
+  | 'segmentIndex'
+  | 'fileCreationNumber';
+export type SegmentField = Exclude<ClassField<Segment>, SegmentContextField>;
+export type SegmentFieldValues = Record<SegmentField, { before: string; after: string }>;
 
 export const MAX_TRANSACTION_AMOUNT = 100_000_000;
 export const MAX_PAYMENT_DATE_OFFSET_DAYS = 173;
@@ -62,7 +78,9 @@ function defaultCrossRef(
  * @Field positions are within the segment's own 1..240 coordinate
  * space — the parent Transaction handles concatenation.
  */
-export class Segment implements Printable, Loggable, Validable {
+export class Segment
+  implements Printable, Loggable, Validable, UsesFields<Segment, SegmentField>
+{
   readonly #builder: EFTFileBuilder;
 
   // Context-only properties (not @Field-decorated); used by transforms
@@ -262,6 +280,9 @@ export class Segment implements Printable, Loggable, Validable {
     this.returnTransitNumber = cfg.returnTransitNumber;
     this.returnAccountNumber = cfg.returnAccountNumber;
   }
+  getFieldValues(): SegmentFieldValues {
+    return collectFieldValues(this, Segment) as SegmentFieldValues;
+  }
 
   print(): string {
     return assertRecordLength(renderFields(this, Segment), 'segment', SEGMENT_LENGTH);
@@ -269,17 +290,19 @@ export class Segment implements Printable, Loggable, Validable {
 
   log(): void {
     const tagColor = this.recordType === TRANSACTION_TYPE.CREDIT ? 'green' : 'red';
-    const paymentJulianDate = formatField(this, Segment, 'paymentDate');
-    const dayOfYear = paymentJulianDate.slice(3);
     const xref = formatField(this, Segment, 'crossReferenceNumber');
     const payee = formatField(this, Segment, 'payeeName');
     const bank = `${this.bankInstitutionNumber}-${this.bankTransitNumber}-${this.bankAccountNumber}`;
+    const referenceDate = this.#builder.getConfiguration().fileCreationDate ?? new Date();
 
     const idx = `${this.recordType} ${this.recordNumber.toString().padStart(3, '0')}.${(this.segmentIndex + 1).toString()}`;
     const xrefStr = xref.padEnd(22);
     const payeeStr = payee.padEnd(32);
     const amountStr = Logger.fmtCurrency(this.amount).padStart(12);
-    const dateStr = `${Logger.isoDate(this.paymentDate)} (${dayOfYear})`.padEnd(18);
+    const dateStr =
+      `${Logger.longDate(this.paymentDate)} (${Logger.relativeDays(this.paymentDate, referenceDate)})`.padEnd(
+        33
+      );
     const bankStr = bank.padEnd(22);
     const cpa = `cpa ${this.cpaCode}`;
 

@@ -42,6 +42,46 @@ export class Logger {
     return date.toISOString().slice(0, 10);
   }
 
+  static longDate(date: Date): string {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
+    ];
+    const day = date.getDate();
+    const mod100 = day % 100;
+    let suffix: string;
+    if (mod100 >= 11 && mod100 <= 13) suffix = 'th';
+    else if (day % 10 === 1) suffix = 'st';
+    else if (day % 10 === 2) suffix = 'nd';
+    else if (day % 10 === 3) suffix = 'rd';
+    else suffix = 'th';
+    const month = months[date.getMonth()] ?? '';
+    return `${month} ${String(day)}${suffix}, ${String(date.getFullYear())}`;
+  }
+
+  static relativeDays(date: Date, reference: Date = new Date()): string {
+    const a = new Date(
+      reference.getFullYear(),
+      reference.getMonth(),
+      reference.getDate()
+    ).getTime();
+    const b = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    const days = Math.round((b - a) / 86400000);
+    if (days === 0) return 'today';
+    const sign = days > 0 ? '+' : '-';
+    return `${sign}${String(Math.abs(days))} days`;
+  }
+
   static fmtCurrency(amount: number): string {
     return (
       '$' +

@@ -4,6 +4,7 @@ import type {
   BankTransit
 } from '#domain/BankPADInformation';
 import type { CPATransactionCode } from '#domain/CPACodes';
+import { ClassField } from '#utils';
 
 export interface EFTConfiguration {
   /**
@@ -113,4 +114,8 @@ export interface Printable {
  */
 export interface Validable {
   validate(): void;
+}
+
+export interface UsesFields<T, K extends PropertyKey = ClassField<T>> {
+  getFieldValues(): Record<K, { before: string; after: string }>;
 }

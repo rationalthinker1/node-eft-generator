@@ -1,6 +1,6 @@
 import type { EFTFileBuilder } from '#EFTFileBuilder';
 import { Field, renderFields, validateFields } from '#records/Field';
-import { Segment } from '#records/Segment';
+import { Segment, type SegmentFieldValues } from '#records/Segment';
 import {
   TRANSACTION_TYPE,
   type EFTTransaction,
@@ -85,6 +85,10 @@ export class Transaction implements Printable, Loggable, Validable {
       'transaction',
       RECORD_LENGTH
     );
+  }
+
+  getFieldValues(): Array<SegmentFieldValues> {
+    return this.segments.map((s) => s.getFieldValues());
   }
 
   log(): void {

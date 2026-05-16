@@ -116,6 +116,40 @@ export function renderFields(instance: object, ctor: Ctor): string {
 
 /**
  * Walks @Field-decorated properties on `instance` (in start-position
+ * order) and returns a `{ before, after }` snapshot for each: `before`
+ * is the raw instance value coerced to a string (Date → ISO, undefined
+ * → ''), `after` is the transformed on-the-wire string before padding.
+ * Used by record classes' `getFieldValues()` to expose an inspectable
+ * view of every field alongside the rendered output.
+ */
+export function collectFieldValues(
+  instance: object,
+  ctor: Ctor
+): Record<string, { before: string; after: string }> {
+  const result: Record<string, { before: string; after: string }> = {};
+  for (const f of getFields(ctor)) {
+    const raw = (instance as Record<string, unknown>)[f.propertyKey];
+    let before: string;
+    if (raw instanceof Date) {
+      before = raw.toISOString();
+    } else if (raw === undefined || raw === null) {
+      before = '';
+    } else if (
+      typeof raw === 'string' ||
+      typeof raw === 'number' ||
+      typeof raw === 'boolean'
+    ) {
+      before = String(raw);
+    } else {
+      before = '';
+    }
+    result[f.propertyKey] = { before, after: resolveFieldValue(f, instance) };
+  }
+  return result;
+}
+
+/**
+ * Walks @Field-decorated properties on `instance` (in start-position
  * order) and invokes each field's optional `validate` against the
  * transformed value (the on-the-wire string the field will render,
  * before width padding). Throws on the first violation found.

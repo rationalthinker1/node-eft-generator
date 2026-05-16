@@ -10,6 +10,15 @@ import { Trailer } from '#records/Trailer';
 import { Transaction } from '#records/Transaction';
 import { NEWLINE } from '#utils/index';
 
+type HeaderFieldValues = ReturnType<Header['getFieldValues']>;
+type TransactionFieldValues = ReturnType<Transaction['getFieldValues']>;
+type TrailerFieldValues = ReturnType<Trailer['getFieldValues']>;
+
+export interface EFTGenerateResult {
+  output: string;
+  lines: Array<HeaderFieldValues | TransactionFieldValues | TrailerFieldValues>;
+}
+
 export class EFTFileBuilder {
   readonly #config: EFTConfiguration;
   readonly #transactions: Array<EFTTransaction>;
@@ -50,23 +59,38 @@ export class EFTFileBuilder {
   }
 
   /**
-   * Generates a CPA-005 formatted string.
+   * Generates a CPA-005 formatted string and a per-record breakdown of
+   * each field's pre-format (`before`) and on-the-wire (`after`) value.
+   * `lines` is ordered: header, one entry per transaction (a flat list of
+   * its segments' field values), then the trailer.
+   *
    * @throws Fatal error if the configuration or transactions don't pass validation.
-   * @returns Data formatted to the CPA-005 standard.
    */
-  generate(): string {
+  generate(): EFTGenerateResult {
     this.#validator.validate();
 
-    this.#lines.push(new Header(this));
+    const header = new Header(this);
+    this.#lines.push(header);
+    const transactions: Array<Transaction> = [];
     for (const [index, tx] of this.#transactions.entries()) {
       const recordNumber = index + 2; // header is record 1
-      this.#lines.push(new Transaction(this, tx, recordNumber));
+      const transaction = new Transaction(this, tx, recordNumber);
+      transactions.push(transaction);
+      this.#lines.push(transaction);
     }
-    this.#lines.push(new Trailer(this));
+    const trailer = new Trailer(this);
+    this.#lines.push(trailer);
 
     const output = this.#lines.map((line) => line.print()).join(NEWLINE);
     this.#validator.validateFile(output);
-    return output;
+
+    const lines: EFTGenerateResult['lines'] = [
+      header.getFieldValues(),
+      ...transactions.map((t) => t.getFieldValues()),
+      trailer.getFieldValues()
+    ];
+
+    return { output, lines };
   }
 
   /**

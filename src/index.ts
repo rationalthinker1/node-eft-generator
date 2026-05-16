@@ -13,8 +13,12 @@ export { Header } from '#records/Header';
 export { Segment } from '#records/Segment';
 export { Transaction } from '#records/Transaction';
 export { Trailer } from '#records/Trailer';
-export { BankInstitution, BankPADInformation } from '#domain/BankPADInformation';
-export type { BankAccount, BankTransit } from '#domain/BankPADInformation';
+export { BankInstitutions, BankPADInformation } from '#domain/BankPADInformation';
+export type {
+  BankInstitution,
+  BankAccount,
+  BankTransit
+} from '#domain/BankPADInformation';
 export { CPATransactionCodes } from '#domain/CPACodes';
 export type { CPATransactionCode } from '#domain/CPACodes';
 export type { Loggable, Printable, Validable } from '#types';

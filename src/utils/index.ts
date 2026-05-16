@@ -25,6 +25,10 @@ export function sanitizeCPA005Text(input: string): string {
   return input.toUpperCase().replaceAll(PROHIBITED_OUTPUT_CHARACTERS_GLOBAL, ' ');
 }
 
+export type ClassField<T> = {
+  [K in keyof T]: T[K] extends (...args: Array<never>) => unknown ? never : K;
+}[keyof T];
+
 /**
  * Pad a value to a fixed width. Throws if the value already exceeds the
  * width so calculation bugs surface at the offending field instead of

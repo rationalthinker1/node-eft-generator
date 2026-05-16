@@ -45,57 +45,23 @@ eftFile.addDebitTransaction({
 
 // `generate()` runs the strict validator first; any spec violation
 // throws before any output is written.
-const [output] = eftFile.generate()
+const { output, lines } = eftFile.generate()
 
 fs.writeFileSync('cpa005.txt', output)
 ```
+
+`output` is the CPA-005 string. `lines` is a per-record breakdown — one
+entry per logical record (header, each transaction, trailer). Each entry
+maps every `@Field`-decorated property to `{ before, after }`, where
+`before` is the raw instance value coerced to a string and `after` is
+the on-the-wire value rendered for that field. A transaction entry is a
+flat array of its segments' field-value records.
 
 The validator can also be invoked directly:
 
 ```javascript
 eftFile.validate() // returns void; throws on any violation
 ```
-
-## Migrating from 2.x to 3.x
-
-- Digit fields (`bankInstitutionNumber`, `bankTransitNumber`, `bankAccountNumber`,
-  and the `return*Number` config fields) are now branded types. Construct them
-  via `BankPADInformation.bankInstitution(...)`, `.bankTransit(...)`,
-  `.bankAccount(...)`. Bank institution numbers are validated against the
-  Payments Canada FI list.
-- `cpaCode` is the literal string union `CPATransactionCode`; only known codes
-  type-check.
-
-## Migrating from 3.x to 4.x
-
-- `EFTFileBuilder.validate()` now returns `void` and throws on any spec
-  violation. Catch the thrown `Error` if you need a boolean.
-- The validator is strict: prohibited characters, oversized names, duplicate
-  cross-reference numbers, empty transactions, segments-per-record overflow,
-  and out-of-range payment dates (more than 173 days from `fileCreationDate`)
-  all throw instead of warn.
-- `originatorShortName` is no longer auto-defaulted to `originatorLongName`.
-
-## Migrating from 1.x to 2.x
-
-The top-level class was renamed from `EFTGenerator` to `EFTFileBuilder` to make
-room for an internal `EFTGenerator` class that owns CPA-005 formatting. Two
-methods on the public class were also renamed for clarity:
-
-```diff
-- import { EFTGenerator } from '@rationalthinker1/eft-generator'
-- const eft = new EFTGenerator(config)
-+ import { EFTFileBuilder } from '@rationalthinker1/eft-generator'
-+ const eft = new EFTFileBuilder(config)
-
-- eft.toCPA005()
-- eft.validateCPA005()
-+ eft.generate()
-+ eft.validate()
-```
-
-`addTransaction`, `addCreditTransaction`, `addDebitTransaction`,
-`getConfiguration`, and `getTransactions` are unchanged.
 
 ## Resources
 

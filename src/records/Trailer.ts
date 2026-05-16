@@ -1,18 +1,19 @@
 import type { EFTFileBuilder } from '#EFTFileBuilder';
-import { Field, renderFields, validateFields } from '#records/Field';
+import { collectFieldValues, Field, renderFields, validateFields } from '#records/Field';
 import { Logger } from '#utils/Logger';
 import {
   RECORD_TYPE,
   TRANSACTION_TYPE,
+  UsesFields,
   type Loggable,
   type Printable,
   type Validable
 } from '#types';
-import { assertRecordLength, sanitizeCPA005Text } from '#utils/index';
+import { assertRecordLength, ClassField, sanitizeCPA005Text } from '#utils/index';
 
 const RECORD_LENGTH = 1464;
 
-export class Trailer implements Printable, Loggable, Validable {
+export class Trailer implements Printable, Loggable, Validable, UsesFields<Trailer> {
   @Field({ start: 1, end: 1, pad: '0', align: 'right' })
   recordType = RECORD_TYPE.TRAILER;
 
@@ -107,6 +108,10 @@ export class Trailer implements Printable, Loggable, Validable {
   print(): string {
     this.log();
     return assertRecordLength(renderFields(this, Trailer), 'trailer', RECORD_LENGTH);
+  }
+
+  getFieldValues(): Record<ClassField<Trailer>, { before: string; after: string }> {
+    return collectFieldValues(this, Trailer);
   }
 
   /**

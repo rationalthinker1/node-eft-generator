@@ -1,10 +1,23 @@
 import type { EFTFileBuilder } from '#EFTFileBuilder';
-import { Field, formatField, renderFields, validateFields } from '#records/Field';
+import {
+  collectFieldValues,
+  Field,
+  formatField,
+  renderFields,
+  validateFields
+} from '#records/Field';
 import { Logger } from '#utils/Logger';
 import { SEGMENT_FIELD_WIDTHS } from '#records/Segment';
-import { RECORD_TYPE, type Loggable, type Printable, type Validable } from '#types';
+import {
+  RECORD_TYPE,
+  UsesFields,
+  type Loggable,
+  type Printable,
+  type Validable
+} from '#types';
 import {
   assertRecordLength,
+  ClassField,
   containsProhibitedCharacters,
   sanitizeCPA005Text,
   toPaddedJulianDate
@@ -19,7 +32,7 @@ export const HEADER_FIELD_WIDTHS = {
   originatorLongName: 30
 } as const;
 
-export class Header implements Printable, Loggable, Validable {
+export class Header implements Printable, Loggable, Validable, UsesFields<Header> {
   readonly #builder: EFTFileBuilder;
 
   @Field({ start: 1, end: 1, pad: '0', align: 'right' })
@@ -111,6 +124,10 @@ export class Header implements Printable, Loggable, Validable {
   print(): string {
     this.log();
     return assertRecordLength(renderFields(this, Header), 'header', RECORD_LENGTH);
+  }
+
+  getFieldValues(): Record<ClassField<Header>, { before: string; after: string }> {
+    return collectFieldValues(this, Header);
   }
 
   /**
