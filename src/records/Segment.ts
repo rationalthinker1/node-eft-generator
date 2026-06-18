@@ -158,7 +158,7 @@ export class Segment
           name = name.slice(0, SEGMENT_FIELD_WIDTHS.payeeName);
         }
       }
-      return name;
+      return name.trim().replaceAll(/\s+/g, ' ');
     },
     validate: (value) => {
       if (value.length > SEGMENT_FIELD_WIDTHS.payeeName) {

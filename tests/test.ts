@@ -391,7 +391,7 @@ await describe('eft-generator - CPA-005', async () => {
       } = captureConsoleWarn(() => eftGenerator.generate());
 
       assert.match(warnings.join('\n'), /payeeName contains prohibited characters/);
-      assert.match(output, /INVALID  PAYEE  NAME/);
+      assert.match(output, /INVALID PAYEE NAME/);
       assert.doesNotMatch(output, /[()]/);
     });
 
